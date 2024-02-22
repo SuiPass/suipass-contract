@@ -21,6 +21,7 @@ module suipass::x {
       update_fee: u64,
       balance: Balance<SUI>,  
       total_levels: u16
+      //Need a set or a way to store all github username, since we didn't allow a github account is used by 2 different accounts
     }
 
   // User will store their record in their wallet - Maybe we need to change later, I'm not sure =))
