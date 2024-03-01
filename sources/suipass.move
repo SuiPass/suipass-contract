@@ -21,6 +21,7 @@ module suipass::suipass {
     const EProviderNotExist: u64 = 0;
     const EProviderAlreadyExist: u64 = 1;
     const EUsernotQualified: u64 = 2;
+    const ENotAdmin: u64 = 3;
 
     // This struct store supported providers and their score
     struct SuiPass has key, store {
@@ -67,21 +68,27 @@ module suipass::suipass {
         });
     }
 
-    public fun add_provider(suiPass: &mut SuiPass, provider: address, score: u16, _: &mut TxContext) {
-        assert!(!vec_set::contains(&suiPass.providers, &provider), EProviderAlreadyExist);
-        table::add(&mut suiPass.providers_data, provider, Provider {score});
-        vec_set::insert(&mut suiPass.providers, provider);
+    public fun add_provider(suipass: &mut SuiPass, admin_cap: &AdminCap, provider: address, score: u16, _: &mut TxContext) {
+        assert_admin(suipass, admin_cap);
+        assert!(!vec_set::contains(&suipass.providers, &provider), EProviderAlreadyExist);
+
+        table::add(&mut suipass.providers_data, provider, Provider {score});
+        vec_set::insert(&mut suipass.providers, provider);
     }
 
-    public fun remove_provider(suiPass: &mut SuiPass, provider: address, _: &mut TxContext) {
-        assert_provider_exist(suiPass, provider);
-        vec_set::remove(&mut suiPass.providers, &provider);
-        table::remove(&mut suiPass.providers_data, provider);
+    public fun remove_provider(suipass: &mut SuiPass, admin_cap: &AdminCap, provider: address, _: &mut TxContext) {
+        assert_admin(suipass, admin_cap);
+        assert_provider_exist(suipass, provider);
+
+        vec_set::remove(&mut suipass.providers, &provider);
+        table::remove(&mut suipass.providers_data, provider);
     }
 
-    public fun update_provider_score(suiPass: &mut SuiPass, provider: address, score: u16, _: &mut TxContext) {
-        assert_provider_exist(suiPass, provider);
-        table::borrow_mut(&mut suiPass.providers_data, provider).score = score;
+    public fun update_provider_score(suipass: &mut SuiPass, admin_cap: &AdminCap, provider: address, score: u16, _: &mut TxContext) {
+        assert_admin(suipass, admin_cap);
+        assert_provider_exist(suipass, provider);
+
+        table::borrow_mut(&mut suipass.providers_data, provider).score = score;
     }
 
 
@@ -130,6 +137,12 @@ module suipass::suipass {
     //==============================================================================================
     // Validation functions - Add your validation functions here (if any)
     //==============================================================================================
+    fun assert_admin(suipass: &SuiPass, admin_cap: &AdminCap) {
+        if (object::uid_to_inner(&suipass.id) != admin_cap.suipass) {
+            abort(ENotAdmin)
+        };
+    }
+
     fun assert_provider_exist(suiPass: &SuiPass, provider: address) {
         assert!(vec_set::contains(&suiPass.providers, &provider), EProviderNotExist);
     }
