@@ -1,5 +1,5 @@
 module suipass::suipass {
-    use sui::object::{Self, UID};
+    use sui::object::{Self, UID, ID};
     use std::string::{Self, String};
     use sui::transfer;
     use sui::tx_context::{Self, TxContext};
@@ -47,16 +47,19 @@ module suipass::suipass {
     }
 
     struct AdminCap has key {
-        id: UID
+        id: UID,
+        suipass: ID
     }
 
     fun init(ctx: &mut TxContext) {
+        let suipass_uid = object::new(ctx);
         transfer::transfer(AdminCap {
             id: object::new(ctx),
+            suipass: object::uid_to_inner(&suipass_uid)
         }, tx_context::sender(ctx));
 
         transfer::share_object(SuiPass {
-            id: object::new(ctx),
+            id: suipass_uid,
             providers: vec_set::empty(),
             providers_data: table::new<address, Provider>(ctx),
             threshold: DEFAULT_THRESHOLD,
