@@ -64,30 +64,30 @@ module suipass::suipass {
         });
     }
 
-    public fun addProvider(suiPass: &mut SuiPass, provider: address, score: u16, _: &mut TxContext) {
+    public fun add_provider(suiPass: &mut SuiPass, provider: address, score: u16, _: &mut TxContext) {
         assert!(!vec_set::contains(&suiPass.providers, &provider), EProviderAlreadyExist);
         table::add(&mut suiPass.providers_data, provider, Provider {score});
         vec_set::insert(&mut suiPass.providers, provider);
     }
 
-    public fun removeProvider(suiPass: &mut SuiPass, provider: address, _: &mut TxContext) {
-        assert!(vec_set::contains(&suiPass.providers, &provider), EProviderNotExist);
+    public fun remove_provider(suiPass: &mut SuiPass, provider: address, _: &mut TxContext) {
+        assert_provider_exist(suiPass, provider);
         vec_set::remove(&mut suiPass.providers, &provider);
         table::remove(&mut suiPass.providers_data, provider);
     }
 
-    public fun updateProviderScore(suiPass: &mut SuiPass, provider: address, score: u16, _: &mut TxContext) {
-        assert!(vec_set::contains(&suiPass.providers, &provider), EProviderNotExist);
+    public fun update_provider_score(suiPass: &mut SuiPass, provider: address, score: u16, _: &mut TxContext) {
+        assert_provider_exist(suiPass, provider);
         table::borrow_mut(&mut suiPass.providers_data, provider).score = score;
     }
 
 
-    public fun getProviderScore(suiPass: &SuiPass, provider: address, _: &mut TxContext): u16 {
-        assert!(vec_set::contains(&suiPass.providers, &provider), EProviderNotExist);
+    public fun get_provider_score(suiPass: &SuiPass, provider: address, _: &mut TxContext): u16 {
+        assert_provider_exist(suiPass, provider);
         return table::borrow(&suiPass.providers_data, provider).score
     }
 
-    public fun calculateUserScore(suiPass: &SuiPass, user: address, _: &mut TxContext): u16 {
+    public fun calculate_user_score(suiPass: &SuiPass, user: address, _: &mut TxContext): u16 {
         let providers_vector = vec_set::keys(&suiPass.providers);
         let len = vector::length(providers_vector) - 1;
 
@@ -108,8 +108,8 @@ module suipass::suipass {
 
         result
     }
-    public entry fun mintPassport(suiPass: &SuiPass, ctx: &mut TxContext) {
-        let score = calculateUserScore(suiPass, tx_context::sender(ctx), ctx);
+    public entry fun mint_passport(suiPass: &SuiPass, ctx: &mut TxContext) {
+        let score = calculate_user_score(suiPass, tx_context::sender(ctx), ctx);
 
         assert!(score >= suiPass.threshold, EUsernotQualified);
 
@@ -122,5 +122,12 @@ module suipass::suipass {
             score,
             threshold: suiPass.threshold
         }, tx_context::sender(ctx));
+    }
+
+    //==============================================================================================
+    // Validation functions - Add your validation functions here (if any)
+    //==============================================================================================
+    fun assert_provider_exist(suiPass: &SuiPass, provider: address) {
+        assert!(vec_set::contains(&suiPass.providers, &provider), EProviderNotExist);
     }
 }
