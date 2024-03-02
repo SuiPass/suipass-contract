@@ -20,7 +20,8 @@ module suipass::provider {
     const ESameScore: u64 = 1;
     const ERequestRejected: u64 = 2;
     const EInvalidRequest: u64 = 3;
-    const ENotProviderOwner: u64 = 1;
+    const ENotProviderOwner: u64 = 4;
+    const EInsufficientPayment: u64 = 5;
 
     struct Provider has store, key {
         id: UID,
@@ -64,10 +65,20 @@ module suipass::provider {
         coin: &mut coin::Coin<SUI>,
         ctx: &mut TxContext
     ) {
+        let balance = coin::balance_mut(coin);
+
+        if (balance::value(balance) < provider.submit_fee) {
+            abort(EInsufficientPayment)
+        };
+
+        let coin = coin::take(balance, provider.submit_fee, ctx);
+        coin::put(&mut provider.balance, coin);
+
         let req = Request {
             request_by,
             proof: string::utf8(proof)
         };
+
         table::add(&mut provider.requests, request_by, req);
     }
 
