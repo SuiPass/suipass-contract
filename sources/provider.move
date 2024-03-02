@@ -1,5 +1,5 @@
-module suipass::x {
-    use sui::object::{Self, UID};
+module suipass::provider {
+    use sui::object::{Self, UID, ID};
     use std::string::{Self, String};
     use sui::transfer;
     use sui::tx_context::{Self, TxContext};
@@ -9,6 +9,8 @@ module suipass::x {
     use sui::table::{Self, Table};
 
     use std::vector;
+
+    friend suipass::suipass;
 
     // Errors
     const EInsufficientBalance: u64 = 0;
@@ -24,7 +26,9 @@ module suipass::x {
         balance: Balance<SUI>,  
         total_levels: u16,
         requests: Table<address ,Request>,
-        records: Table<address , Record>
+        records: Table<address , Record>,
+
+        score: u16,
     }
 
     struct Request has store, drop {
@@ -45,36 +49,61 @@ module suipass::x {
     // Level 3: cur_ts - joined_date >= 3 years
     // Hopefully we are able to update the contract to change these conditions
 
-    struct ProviderCap has key {id: UID}
+    struct ProviderCap has key, store {id: UID, provider: ID}
 
-    fun init(ctx: &mut TxContext) {
-        transfer::transfer(ProviderCap {
-            id: object::new(ctx),
-        }, tx_context::sender(ctx));
-    }
+    // fun init(ctx: &mut TxContext) {
+    //     transfer::transfer(ProviderCap {
+    //         id: object::new(ctx),
+    //     }, tx_context::sender(ctx));
+    // }
 
     // only suipass owner can create a provider
-    fun create_provider(
-        _: &ProviderCap,
+    public(friend) fun create_provider(
         name: vector<u8>, // Name of the provider
         submit_fee: u64, // A provider can add a fee for every created credit
         update_fee: u64,
         total_levels: u16,
-        ctx: &mut TxContext) {
-
-        transfer::share_object(Provider {
+        score: u16,
+        ctx: &mut TxContext
+    ): (ID, ProviderCap, Provider) {
+        let uid = object::new(ctx);
+        let id = object::uid_to_inner(&uid);
+        let cap = ProviderCap {
             id: object::new(ctx),
+            provider: id
+        };
+        let provider = Provider {
+            id: uid,
             name: string::utf8(name),
             submit_fee,
             update_fee,
             balance: balance::zero(),
             total_levels,
             requests: table::new<address, Request>(ctx),
-            records: table::new<address, Record>(ctx)
-        });
+            records: table::new<address, Record>(ctx),
+            score,
+        };
+        (id, cap, provider)
     }
 
+    public(friend) fun update_score(
+        provider: &mut Provider, 
+        score: u16,
+    ) {
+        provider.score = score
+    }
+
+    public fun id(provider: &Provider): ID {
+        object::uid_to_inner(&provider.id)
+    }
+
+    public fun score(provider: &Provider): u16 {
+        provider.score
+    }
+
+
     fun submit_request(
+        account: &mut Account,
         provider: &mut Provider,
         request_by: address,
         proof: vector<u8>) {
@@ -104,7 +133,7 @@ module suipass::x {
 
     // TODO: We will handle update later 
 
-    public fun total_levels(provider: &mut Provider): u16 { 
+    public fun total_levels(provider: &Provider): u16 { 
         provider.total_levels
     }
 

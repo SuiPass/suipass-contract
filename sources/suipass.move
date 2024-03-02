@@ -12,6 +12,10 @@ module suipass::suipass {
     use sui::table::{Self, Table};
     use sui::vec_set::{Self, VecSet};
 
+    use sui::vec_map::{Self, VecMap};
+
+    use suipass::provider::{Self, Provider};
+
     // This module sumarizes all supported credits,
     // allows users to mint their passport NFT (Need to check if NFT can be updated, OR users will hold a lot of passports since their credit can be expire)
     const DEFAULT_THRESHOLD: u16 = 30; // 30/100
@@ -26,16 +30,14 @@ module suipass::suipass {
     // This struct store supported providers and their score
     struct SuiPass has key, store {
         id: UID,
-        providers: VecSet<address>,
-        providers_data: Table<address, Provider>,
+        providers: VecMap<ID, Provider>,
+        // providers: VecSet<address>,
+        // providers_data: Table<address, Provider>,
         threshold: u16,
         expiration_period: u64
     }
 
     // We need to pass more data into this object, basically suipass's owner can set score for each 3rd party
-    struct Provider has store, drop {
-        score: u16
-    }
 
     // We assume that the threshold will be changed in the future, but it doesn't matter. 
     // The NFT is still legal since it doesn't expire
@@ -49,65 +51,74 @@ module suipass::suipass {
 
     struct AdminCap has key {
         id: UID,
-        suipass: ID
     }
 
     fun init(ctx: &mut TxContext) {
-        let suipass_uid = object::new(ctx);
         transfer::transfer(AdminCap {
             id: object::new(ctx),
-            suipass: object::uid_to_inner(&suipass_uid)
         }, tx_context::sender(ctx));
 
         transfer::share_object(SuiPass {
-            id: suipass_uid,
-            providers: vec_set::empty(),
-            providers_data: table::new<address, Provider>(ctx),
+            id: object::new(ctx),
+            providers: vec_map::empty(),
+            // providers_data: table::new<address, Provider>(ctx),
             threshold: DEFAULT_THRESHOLD,
             expiration_period: DEFAULT_EXPIRATION_PERIOD
         });
     }
 
-    public fun add_provider(suipass: &mut SuiPass, admin_cap: &AdminCap, provider: address, score: u16, _: &mut TxContext) {
-        assert_admin(suipass, admin_cap);
-        assert!(!vec_set::contains(&suipass.providers, &provider), EProviderAlreadyExist);
+    public entry fun add_provider(
+        _: &AdminCap,
+        owner: address,
+        suipass: &mut SuiPass, 
+        name: vector<u8>,
+        submit_fee: u64,
+        update_fee: u64,
+        total_levels: u16,
+        score: u16,
+        ctx: &mut TxContext
+    ) {
+        let (id, provider_cap, provider) = provider::create_provider(name, submit_fee, update_fee, total_levels, score, ctx);
 
-        table::add(&mut suipass.providers_data, provider, Provider {score});
-        vec_set::insert(&mut suipass.providers, provider);
+        assert!(!vec_map::contains(&suipass.providers, &id), EProviderAlreadyExist);
+        vec_map::insert(&mut suipass.providers, id, provider);
+        transfer::public_transfer(provider_cap, owner)
     }
 
-    public fun remove_provider(suipass: &mut SuiPass, admin_cap: &AdminCap, provider: address, _: &mut TxContext) {
-        assert_admin(suipass, admin_cap);
-        assert_provider_exist(suipass, provider);
+    // public fun remove_provider(_: &AdminCap, suipass: &mut SuiPass, provider: &Provider, _: &mut TxContext) {
+    //     let id = provider::id(provider);
+    //     assert_provider_exist(suipass, id);
+    //
+    //     vec_map::get_mut(&mut suipass.providers, &id);
+    //     // table::remove(&mut suipass.providers_data, provider);
+    // }
 
-        vec_set::remove(&mut suipass.providers, &provider);
-        table::remove(&mut suipass.providers_data, provider);
+    public fun update_provider_score(_: &AdminCap, suipass: &mut SuiPass, provider: &Provider, score: u16, _: &mut TxContext) {
+        let id = provider::id(provider);
+        assert_provider_exist(suipass, id);
+
+        let provider = vec_map::get_mut(&mut suipass.providers, &id);
+        provider::update_score(provider, score);
     }
 
-    public fun update_provider_score(suipass: &mut SuiPass, admin_cap: &AdminCap, provider: address, score: u16, _: &mut TxContext) {
-        assert_admin(suipass, admin_cap);
-        assert_provider_exist(suipass, provider);
 
-        table::borrow_mut(&mut suipass.providers_data, provider).score = score;
-    }
-
-
-    public fun get_provider_score(suiPass: &SuiPass, provider: address, _: &mut TxContext): u16 {
-        assert_provider_exist(suiPass, provider);
-        return table::borrow(&suiPass.providers_data, provider).score
+    public fun get_provider_score(suipass: &SuiPass, provider: &Provider, _: &mut TxContext): u16 {
+        let id = provider::id(provider);
+        assert_provider_exist(suipass, id);
+        provider::score(vec_map::get(&suipass.providers, &id))
     }
 
     public fun calculate_user_score(suiPass: &SuiPass, user: address, _: &mut TxContext): u16 {
-        let providers_vector = vec_set::keys(&suiPass.providers);
-        let len = vector::length(providers_vector) - 1;
+        let providers_vector = vec_map::keys(&suiPass.providers);
+        let len = vector::length(&providers_vector) - 1;
 
         let result: u16 = 0;
         loop {
-            let provider = vector::borrow(providers_vector, len); //provider address
-                                                  // We need to call provider module and get current level of a given user
+            let provider = vector::borrow(&providers_vector, len); //provider address
+            // TODO: We need to call provider module and get current level of a given user
             let level = 2;
             let total_levels = 3;
-            let provider_score = table::borrow(&suiPass.providers_data, *provider).score;
+            let provider_score = provider::score(vec_map::get(&suiPass.providers, provider));
             let increase = (level / total_levels * provider_score);
             result = result + increase;
             len = len - 1;
@@ -118,32 +129,26 @@ module suipass::suipass {
 
         result
     }
-    public entry fun mint_passport(suiPass: &SuiPass, ctx: &mut TxContext) {
-        let score = calculate_user_score(suiPass, tx_context::sender(ctx), ctx);
+    public entry fun mint_passport(suipass: &SuiPass, ctx: &mut TxContext) {
+        let score = calculate_user_score(suipass, tx_context::sender(ctx), ctx);
 
-        assert!(score >= suiPass.threshold, EUsernotQualified);
+        assert!(score >= suipass.threshold, EUsernotQualified);
 
         let issued_date = tx_context::epoch_timestamp_ms(ctx);
 
         transfer::transfer(NFTPassportMetadata {
             id: object::new(ctx),
             issued_date,
-            expiration_date: issued_date + suiPass.expiration_period, 
+            expiration_date: issued_date + suipass.expiration_period, 
             score,
-            threshold: suiPass.threshold
+            threshold: suipass.threshold
         }, tx_context::sender(ctx));
     }
 
     //==============================================================================================
     // Validation functions - Add your validation functions here (if any)
     //==============================================================================================
-    fun assert_admin(suipass: &SuiPass, admin_cap: &AdminCap) {
-        if (object::uid_to_inner(&suipass.id) != admin_cap.suipass) {
-            abort(ENotAdmin)
-        };
-    }
-
-    fun assert_provider_exist(suiPass: &SuiPass, provider: address) {
-        assert!(vec_set::contains(&suiPass.providers, &provider), EProviderNotExist);
+    fun assert_provider_exist(suipass: &SuiPass, provider_id: ID) {
+        assert!(vec_map::contains(&suipass.providers, &provider_id), EProviderNotExist);
     }
 }
