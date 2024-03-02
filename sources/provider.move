@@ -10,6 +10,9 @@ module suipass::provider {
 
     use std::vector;
 
+    use suipass::user::{User};
+    use suipass::approval;
+
     friend suipass::suipass;
 
     // Errors
@@ -59,8 +62,8 @@ module suipass::provider {
 
     // only suipass owner can create a provider
     public(friend) fun create_provider(
-        name: vector<u8>, // Name of the provider
-        submit_fee: u64, // A provider can add a fee for every created credit
+        name: vector<u8>,
+        submit_fee: u64,
         update_fee: u64,
         total_levels: u16,
         score: u16,
@@ -86,27 +89,13 @@ module suipass::provider {
         (id, cap, provider)
     }
 
-    public(friend) fun update_score(
-        provider: &mut Provider, 
-        score: u16,
-    ) {
-        provider.score = score
-    }
-
-    public fun id(provider: &Provider): ID {
-        object::uid_to_inner(&provider.id)
-    }
-
-    public fun score(provider: &Provider): u16 {
-        provider.score
-    }
-
-
+    // TODO: require coin to call this method
     fun submit_request(
-        account: &mut Account,
+        _user: &mut User,
         provider: &mut Provider,
         request_by: address,
-        proof: vector<u8>) {
+        proof: vector<u8>
+    ) {
         let req = Request {
             request_by,
             proof: string::utf8(proof)
@@ -119,27 +108,43 @@ module suipass::provider {
         provider: &mut Provider,
         request_id: address,
         evidence: vector<u8>,
-        score: u16) {
+        level: u16,
+        ctx: &mut TxContext
+    ) {
         assert!(table::contains(&provider.requests, request_id), EInvalidRequest);
         table::remove(&mut provider.requests, request_id);
         assert!(vector::length(&evidence) > 0, ERequestRejected);
 
-        let record = Record {
-            evidence: string::utf8(evidence),
-            score
-        };
-        table::add(&mut provider.records, request_id, record);
+        let issued_date = tx_context::epoch_timestamp_ms(ctx);
+
+        let approval = approval::new(id(provider), level, evidence, issued_date, ctx);
+        transfer::public_transfer(approval, request_id)
     }
 
+    // public fun withdraw(_: &ProviderCap, provider: &mut Provider, ctx: &mut TxContext): Coin<SUI> {
+    //     let amount = balance::value(&provider.balance);
+    //     coin::take(&mut provider.balance, amount, ctx)
+    // }
+
     // TODO: We will handle update later 
+
+    public fun id(provider: &Provider): ID {
+        object::uid_to_inner(&provider.id)
+    }
+
+    public fun score(provider: &Provider): u16 {
+        provider.score
+    }
 
     public fun total_levels(provider: &Provider): u16 { 
         provider.total_levels
     }
 
-    public fun withdraw(_: &ProviderCap, provider: &mut Provider, ctx: &mut TxContext): Coin<SUI> {
-        let amount = balance::value(&provider.balance);
-        coin::take(&mut provider.balance, amount, ctx)
+    public(friend) fun update_score(
+        provider: &mut Provider, 
+        score: u16,
+    ) {
+        provider.score = score
     }
 }
 

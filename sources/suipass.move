@@ -15,6 +15,7 @@ module suipass::suipass {
     use sui::vec_map::{Self, VecMap};
 
     use suipass::provider::{Self, Provider};
+    use suipass::user::{Self, User};
 
     // This module sumarizes all supported credits,
     // allows users to mint their passport NFT (Need to check if NFT can be updated, OR users will hold a lot of passports since their credit can be expire)
@@ -41,8 +42,11 @@ module suipass::suipass {
 
     // We assume that the threshold will be changed in the future, but it doesn't matter. 
     // The NFT is still legal since it doesn't expire
-    struct NFTPassportMetadata has key {
+    struct NFTPassportMetadata has key, store {
         id: UID,
+        // name: string::String,
+        // description: string::String,
+        // url: Url,
         issued_date: u64,
         expiration_date: u64,
         score: u16,
@@ -69,8 +73,8 @@ module suipass::suipass {
 
     public entry fun add_provider(
         _: &AdminCap,
-        owner: address,
         suipass: &mut SuiPass, 
+        owner: address,
         name: vector<u8>,
         submit_fee: u64,
         update_fee: u64,
@@ -101,26 +105,31 @@ module suipass::suipass {
         provider::update_score(provider, score);
     }
 
-
     public fun get_provider_score(suipass: &SuiPass, provider: &Provider, _: &mut TxContext): u16 {
         let id = provider::id(provider);
         assert_provider_exist(suipass, id);
         provider::score(vec_map::get(&suipass.providers, &id))
     }
 
-    public fun calculate_user_score(suiPass: &SuiPass, user: address, _: &mut TxContext): u16 {
-        let providers_vector = vec_map::keys(&suiPass.providers);
-        let len = vector::length(&providers_vector) - 1;
+    public fun calculate_user_score(suiPass: &SuiPass, user: &User, _: &mut TxContext): u16 {
+        let levels = user::levels(user);
+        let ids = vec_map::keys(&levels);
 
         let result: u16 = 0;
+        let len = vector::length(&ids) - 1;
         loop {
-            let provider = vector::borrow(&providers_vector, len); //provider address
-            // TODO: We need to call provider module and get current level of a given user
-            let level = 2;
-            let total_levels = 3;
-            let provider_score = provider::score(vec_map::get(&suiPass.providers, provider));
-            let increase = (level / total_levels * provider_score);
+            let id = vector::borrow(&ids, len);
+
+            let level = *vec_map::get(&levels, id);
+
+            let provider = vec_map::get(&suiPass.providers, id);
+            let max_score = provider::score(provider);
+            let total_levels = provider::total_levels(provider);
+
+            let increase = (level / total_levels * max_score);
+
             result = result + increase;
+
             len = len - 1;
             if (len == 0) {
                 break
@@ -129,14 +138,16 @@ module suipass::suipass {
 
         result
     }
-    public entry fun mint_passport(suipass: &SuiPass, ctx: &mut TxContext) {
-        let score = calculate_user_score(suipass, tx_context::sender(ctx), ctx);
+
+    public entry fun mint_passport(suipass: &SuiPass, user: &mut User, ctx: &mut TxContext) {
+
+        let score = calculate_user_score(suipass, user, ctx);
 
         assert!(score >= suipass.threshold, EUsernotQualified);
 
         let issued_date = tx_context::epoch_timestamp_ms(ctx);
 
-        transfer::transfer(NFTPassportMetadata {
+        transfer::public_transfer(NFTPassportMetadata {
             id: object::new(ctx),
             issued_date,
             expiration_date: issued_date + suipass.expiration_period, 
