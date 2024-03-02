@@ -101,10 +101,13 @@ module suipass::provider {
         transfer::public_transfer(approval, request_id)
     }
 
-    // public fun withdraw(_: &ProviderCap, provider: &mut Provider, ctx: &mut TxContext): Coin<SUI> {
-    //     let amount = balance::value(&provider.balance);
-    //     coin::take(&mut provider.balance, amount, ctx)
-    // }
+    public fun withdraw(provider_cap: &ProviderCap, provider: &mut Provider, ctx: &mut TxContext) {
+        assert!(provider_cap.provider == object::uid_to_inner(&provider.id), ENotProviderOwner);
+
+        let amount = balance::value(&provider.balance);
+        let coin = coin::take(&mut provider.balance, amount, ctx);
+        transfer::public_transfer(coin, tx_context::sender(ctx));
+    }
 
     // TODO: We will handle update later 
 
