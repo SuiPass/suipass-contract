@@ -46,10 +46,6 @@ module suipass::user {
         vec_map::insert(&mut user.approvals, approval::provider_id(&approval), approval)
     }
 
-    public fun get_providers(user: &User): vector<ID> {
-        vec_map::keys(&user.approvals)
-    }
-
     public fun levels(user: &User): VecMap<ID, u16> {
         let ids = vec_map::keys(&user.approvals);
         let len = vector::length(&ids) - 1;

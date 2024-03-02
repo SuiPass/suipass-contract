@@ -1,6 +1,7 @@
 [package]
 name = "suipass"
-version = "0.0.1"
+version = "0.0.2"
+published-at = "0x23fa5000e2b86dade4f58fb64bbc68c8996572ac6574310e446d69dd2ca550be"
 
 # edition = "2024.alpha" # To use the Move 2024 edition, currently in alpha
 # license = ""           # e.g., "MIT", "GPL", "Apache 2.0"

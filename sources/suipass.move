@@ -97,7 +97,7 @@ module suipass::suipass {
     //     // table::remove(&mut suipass.providers_data, provider);
     // }
 
-    public fun update_provider_score(_: &AdminCap, suipass: &mut SuiPass, provider: &Provider, score: u16, _: &mut TxContext) {
+    public entry fun update_provider_score(_: &AdminCap, suipass: &mut SuiPass, provider: &Provider, score: u16, _: &mut TxContext) {
         let id = provider::id(provider);
         assert_provider_exist(suipass, id);
 

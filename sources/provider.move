@@ -54,43 +54,8 @@ module suipass::provider {
 
     struct ProviderCap has key, store {id: UID, provider: ID}
 
-    // fun init(ctx: &mut TxContext) {
-    //     transfer::transfer(ProviderCap {
-    //         id: object::new(ctx),
-    //     }, tx_context::sender(ctx));
-    // }
-
-    // only suipass owner can create a provider
-    public(friend) fun create_provider(
-        name: vector<u8>,
-        submit_fee: u64,
-        update_fee: u64,
-        total_levels: u16,
-        score: u16,
-        ctx: &mut TxContext
-    ): (ID, ProviderCap, Provider) {
-        let uid = object::new(ctx);
-        let id = object::uid_to_inner(&uid);
-        let cap = ProviderCap {
-            id: object::new(ctx),
-            provider: id
-        };
-        let provider = Provider {
-            id: uid,
-            name: string::utf8(name),
-            submit_fee,
-            update_fee,
-            balance: balance::zero(),
-            total_levels,
-            requests: table::new<address, Request>(ctx),
-            records: table::new<address, Record>(ctx),
-            score,
-        };
-        (id, cap, provider)
-    }
-
     // TODO: require coin to call this method
-    fun submit_request(
+    public entry fun submit_request(
         _user: &mut User,
         provider: &mut Provider,
         request_by: address,
@@ -103,7 +68,7 @@ module suipass::provider {
         table::add(&mut provider.requests, request_by, req);
     }
 
-    fun resolve_request(
+    public entry fun resolve_request(
         _: &ProviderCap,
         provider: &mut Provider,
         request_id: address,
@@ -138,6 +103,34 @@ module suipass::provider {
 
     public fun total_levels(provider: &Provider): u16 { 
         provider.total_levels
+    }
+
+    public(friend) fun create_provider(
+        name: vector<u8>,
+        submit_fee: u64,
+        update_fee: u64,
+        total_levels: u16,
+        score: u16,
+        ctx: &mut TxContext
+    ): (ID, ProviderCap, Provider) {
+        let uid = object::new(ctx);
+        let id = object::uid_to_inner(&uid);
+        let cap = ProviderCap {
+            id: object::new(ctx),
+            provider: id
+        };
+        let provider = Provider {
+            id: uid,
+            name: string::utf8(name),
+            submit_fee,
+            update_fee,
+            balance: balance::zero(),
+            total_levels,
+            requests: table::new<address, Request>(ctx),
+            records: table::new<address, Record>(ctx),
+            score,
+        };
+        (id, cap, provider)
     }
 
     public(friend) fun update_score(
