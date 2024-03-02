@@ -26,7 +26,7 @@ module suipass::user {
         approvals: VecMap<ID, Approval>,
     }
 
-    public entry fun new(info: vector<u8>, ctx: &mut TxContext) {
+    public fun new(info: vector<u8>, ctx: &mut TxContext) {
         let user = User {
             id: object::new(ctx),
             info: string::utf8(info),
@@ -35,14 +35,14 @@ module suipass::user {
         transfer::transfer(user, tx_context::sender(ctx))
     }
 
-    public entry fun update_info(
+    public fun update_info(
         user: &mut User, 
         info: vector<u8>,
     ) {
         user.info = string::utf8(info)
     }
 
-    public entry fun merge(user: &mut User, approval: Approval) {
+    public fun merge(user: &mut User, approval: Approval) {
         vec_map::insert(&mut user.approvals, approval::provider_id(&approval), approval)
     }
 

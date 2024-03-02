@@ -20,6 +20,7 @@ module suipass::provider {
     const ESameScore: u64 = 1;
     const ERequestRejected: u64 = 2;
     const EInvalidRequest: u64 = 3;
+    const ENotProviderOwner: u64 = 1;
 
     struct Provider has store, key {
         id: UID,
@@ -55,11 +56,13 @@ module suipass::provider {
     struct ProviderCap has key, store {id: UID, provider: ID}
 
     // TODO: require coin to call this method
-    public entry fun submit_request(
+    public fun submit_request(
         _user: &mut User,
         provider: &mut Provider,
         request_by: address,
-        proof: vector<u8>
+        proof: vector<u8>,
+        coin: &mut coin::Coin<SUI>,
+        ctx: &mut TxContext
     ) {
         let req = Request {
             request_by,
@@ -68,14 +71,15 @@ module suipass::provider {
         table::add(&mut provider.requests, request_by, req);
     }
 
-    public entry fun resolve_request(
-        _: &ProviderCap,
+    public fun resolve_request(
+        provider_cap: &ProviderCap,
         provider: &mut Provider,
         request_id: address,
         evidence: vector<u8>,
         level: u16,
         ctx: &mut TxContext
     ) {
+        assert!(provider_cap.provider == object::uid_to_inner(&provider.id), ENotProviderOwner);
         assert!(table::contains(&provider.requests, request_id), EInvalidRequest);
         table::remove(&mut provider.requests, request_id);
         assert!(vector::length(&evidence) > 0, ERequestRejected);

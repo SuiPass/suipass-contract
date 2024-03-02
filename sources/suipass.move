@@ -71,7 +71,7 @@ module suipass::suipass {
         });
     }
 
-    public entry fun add_provider(
+    public fun add_provider(
         _: &AdminCap,
         suipass: &mut SuiPass, 
         owner: address,
@@ -97,7 +97,7 @@ module suipass::suipass {
     //     // table::remove(&mut suipass.providers_data, provider);
     // }
 
-    public entry fun update_provider_score(_: &AdminCap, suipass: &mut SuiPass, provider: &Provider, score: u16, _: &mut TxContext) {
+    public fun update_provider_score(_: &AdminCap, suipass: &mut SuiPass, provider: &Provider, score: u16, _: &mut TxContext) {
         let id = provider::id(provider);
         assert_provider_exist(suipass, id);
 
@@ -139,7 +139,7 @@ module suipass::suipass {
         result
     }
 
-    public entry fun mint_passport(suipass: &SuiPass, user: &mut User, ctx: &mut TxContext) {
+    public fun mint_passport(suipass: &SuiPass, user: &mut User, ctx: &mut TxContext) {
 
         let score = calculate_user_score(suipass, user, ctx);
 

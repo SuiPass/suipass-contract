@@ -1,16 +1,24 @@
-PACKAGE_ADDR="0x23fa5000e2b86dade4f58fb64bbc68c8996572ac6574310e446d69dd2ca550be"
+PACKAGE_ADDR="0x893a695f0c09af2b50d60b701140baa1e2d5ae6796eb12c9134cf1f024f1982c"
+UPGRADE_CAP="0x8279f2d4e6b48837569a81fdfdd9480a0c451060ba2168e07bdd86a388d87b8a"
+
+ADDR="0xe4bf3390a02c8c435f6f6817e1ad264933df4a07ddbe7f126501423bc5329398"
+
+GAS=100000000
+
+pbuild:
+	sui move build
 
 key-list:
 	sui keytool list
 
 faucet:
-	ADDR=0xe4bf3390a02c8c435f6f6817e1ad264933df4a07ddbe7f126501423bc5329398 sh ./scripts/faucet.sh
+	ADDR=${ADDR} sh ./scripts/faucet.sh
 
 publish:
-	sui client publish --gas-budget 100000000 build/suipass
+	sui client publish --gas-budget ${GAS} build/suipass
 
 upgrade:
-	sui client upgrade --gas-budget 100000000 --upgrade-capability 0x494ec0780a7a0603395b8317ac65d36514868f2ddde05a39f9741c9d3e88a6a8
+	sui client upgrade --gas-budget ${GAS} --upgrade-capability ${UPGRADE_CAP}
 
 add_provider:
 	sui client call \
