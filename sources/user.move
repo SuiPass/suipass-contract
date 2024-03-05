@@ -14,6 +14,11 @@ module suipass::user {
 
     friend suipass::suipass;
 
+    #[test_only]
+    use sui::test_scenario;
+    #[test_only]
+    use sui::test_utils::assert_eq;
+
     // Errors
     const EInsufficientBalance: u64 = 0;
     const ESameScore: u64 = 1;
@@ -48,20 +53,115 @@ module suipass::user {
 
     public fun levels(user: &User): VecMap<ID, u16> {
         let ids = vec_map::keys(&user.approvals);
-        let len = vector::length(&ids) - 1;
+        let len = vector::length(&ids);
+        std::debug::print(&ids);
 
         let result: VecMap<ID, u16> = vec_map::empty();
         loop {
+            if (len == 0) break;
+            len = len - 1;
+
             let id = vector::borrow(&ids, len);
             let approval = vec_map::get(&user.approvals, id);
 
             vec_map::insert(&mut result, *id, approval::level(approval));
-
-            len = len - 1;
-            if (len == 0) {
-                break
-            }
         };
         result
+    }
+
+    //==============================================================================================
+    // Tests - DO NOT MODIFY
+    //==============================================================================================
+    #[test]
+    public fun test_create_user_success_create_user() {
+        let shop_owner = @0xa;
+
+        let scenario_val = test_scenario::begin(shop_owner);
+        let scenario = &mut scenario_val;
+
+        {
+            new(b"name: test", test_scenario::ctx(scenario));
+        };
+        let tx = test_scenario::next_tx(scenario, shop_owner);
+
+        {
+            let user = test_scenario::take_from_sender<User>(scenario);
+
+            assert_eq(user.info, string::utf8(b"name: test"));
+
+            test_scenario::return_to_sender(scenario, user);
+        };
+        let tx = test_scenario::end(scenario_val);
+    }
+
+    #[test]
+    public fun test_get_levels_success() {
+        let shop_owner = @0xa;
+
+        let scenario_val = test_scenario::begin(shop_owner);
+        let scenario = &mut scenario_val;
+
+        {
+            new(b"name: test", test_scenario::ctx(scenario));
+        };
+        let tx = test_scenario::next_tx(scenario, shop_owner);
+
+        {
+            let user = test_scenario::take_from_sender<User>(scenario);
+
+            assert_eq(user.info, string::utf8(b"name: test"));
+
+            let levels = levels(&user);
+
+            std::debug::print(&levels);
+
+            test_scenario::return_to_sender(scenario, user);
+
+        };
+
+        let tx = test_scenario::end(scenario_val);
+    }
+
+    #[test]
+    public fun test_get_levels_success_with_some_approvals() {
+        let shop_owner = @0xa;
+
+        let scenario_val = test_scenario::begin(shop_owner);
+        let scenario = &mut scenario_val;
+
+        {
+            new(b"name: test", test_scenario::ctx(scenario));
+        };
+        let tx = test_scenario::next_tx(scenario, shop_owner);
+
+        {
+            let user = test_scenario::take_from_sender<User>(scenario);
+
+            assert_eq(user.info, string::utf8(b"name: test"));
+
+            let levels = levels(&user);
+
+            test_scenario::return_to_sender(scenario, user);
+        };
+
+        let tx = test_scenario::next_tx(scenario, shop_owner);
+
+        {
+            let user = test_scenario::take_from_sender<User>(scenario);
+
+            let approval = approval::new(object::uid_to_inner(&user.id), 2, b"hello evidence", 1000, test_scenario::ctx(scenario));
+
+            merge(&mut user, approval);
+
+            std::debug::print(&user);
+
+            let levels = levels(&user);
+
+            std::debug::print(&levels);
+
+            test_scenario::return_to_sender(scenario, user);
+        };
+
+        let tx = test_scenario::end(scenario_val);
     }
 }

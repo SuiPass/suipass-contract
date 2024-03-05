@@ -14,8 +14,13 @@ module suipass::suipass {
 
     use sui::vec_map::{Self, VecMap};
 
-    use suipass::provider::{Self, Provider};
+    use suipass::provider::{Self, Provider, ProviderCap};
     use suipass::user::{Self, User};
+
+    #[test_only]
+    use sui::test_scenario;
+    #[test_only]
+    use sui::test_utils::assert_eq;
 
     // This module sumarizes all supported credits,
     // allows users to mint their passport NFT (Need to check if NFT can be updated, OR users will hold a lot of passports since their credit can be expire)
@@ -105,6 +110,31 @@ module suipass::suipass {
         provider::update_score(provider, score);
     }
 
+    public fun submit_request(
+        _user: &mut User,
+        suipass: &mut SuiPass,
+        provider_id: ID,
+        request_by: address,
+        proof: vector<u8>,
+        coin: &mut coin::Coin<SUI>,
+        ctx: &mut TxContext
+    ) {
+        let provider = vec_map::get_mut(&mut suipass.providers, &provider_id);
+        provider::submit_request(provider, request_by, proof, coin, ctx);
+    }
+
+    public fun resolve_request(
+        provider_cap: &ProviderCap,
+        suipass: &mut SuiPass,
+        request: address,
+        evidence: vector<u8>,
+        level: u16,
+        ctx: &mut TxContext
+    ) {
+        let provider = vec_map::get_mut(&mut suipass.providers, &provider::id_from_cap(provider_cap));
+        provider::resolve_request_internal(provider_cap, provider, request, evidence, level, ctx);
+    }
+
     public fun get_provider_score(suipass: &SuiPass, provider: &Provider, _: &mut TxContext): u16 {
         let id = provider::id(provider);
         assert_provider_exist(suipass, id);
@@ -114,10 +144,13 @@ module suipass::suipass {
     public fun calculate_user_score(suiPass: &SuiPass, user: &User, _: &mut TxContext): u16 {
         let levels = user::levels(user);
         let ids = vec_map::keys(&levels);
+        let len = vector::length(&ids);
 
         let result: u16 = 0;
-        let len = vector::length(&ids) - 1;
         loop {
+            if (len == 0) break;
+            len = len - 1;
+
             let id = vector::borrow(&ids, len);
 
             let level = *vec_map::get(&levels, id);
@@ -129,18 +162,12 @@ module suipass::suipass {
             let increase = (level / total_levels * max_score);
 
             result = result + increase;
-
-            len = len - 1;
-            if (len == 0) {
-                break
-            }
         };
 
         result
     }
 
     public fun mint_passport(suipass: &SuiPass, user: &mut User, ctx: &mut TxContext) {
-
         let score = calculate_user_score(suipass, user, ctx);
 
         assert!(score >= suipass.threshold, EUsernotQualified);
@@ -162,4 +189,8 @@ module suipass::suipass {
     fun assert_provider_exist(suipass: &SuiPass, provider_id: ID) {
         assert!(vec_map::contains(&suipass.providers, &provider_id), EProviderNotExist);
     }
+
+    //==============================================================================================
+    // Tests - DO NOT MODIFY
+    //==============================================================================================
 }

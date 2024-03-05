@@ -1,8 +1,8 @@
 [package]
-name = "suipass"
-version = "0.0.3"
-published-at = "0xce9797a8c1ce34a14d6d3baf36ed393ab25072874cfc043d1b56674c7a8f2df2"
+published-at = "0xf82491a83075c00e956136d960ba4e9d8ce791e147967f5413b181759312dd28"
 
+name = "suipass"
+version = "0.0.4"
 # edition = "2024.alpha" # To use the Move 2024 edition, currently in alpha
 # license = ""           # e.g., "MIT", "GPL", "Apache 2.0"
 # authors = ["..."]      # e.g., ["Joe Smith (joesmith@noemail.com)", "John Snow (johnsnow@noemail.com)"]

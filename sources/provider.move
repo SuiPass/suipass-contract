@@ -57,8 +57,7 @@ module suipass::provider {
     struct ProviderCap has key, store {id: UID, provider: ID}
 
     // TODO: require coin to call this method
-    public fun submit_request(
-        _user: &mut User,
+    public(friend) fun submit_request(
         provider: &mut Provider,
         request_by: address,
         proof: vector<u8>,
@@ -101,6 +100,25 @@ module suipass::provider {
         transfer::public_transfer(approval, request_id)
     }
 
+    public(friend) fun resolve_request_internal(
+        provider_cap: &ProviderCap,
+        provider: &mut Provider,
+        request_id: address,
+        evidence: vector<u8>,
+        level: u16,
+        ctx: &mut TxContext
+    ) {
+        assert!(provider_cap.provider == object::uid_to_inner(&provider.id), ENotProviderOwner);
+        assert!(table::contains(&provider.requests, request_id), EInvalidRequest);
+        table::remove(&mut provider.requests, request_id);
+        assert!(vector::length(&evidence) > 0, ERequestRejected);
+
+        let issued_date = tx_context::epoch_timestamp_ms(ctx);
+
+        let approval = approval::new(id(provider), level, evidence, issued_date, ctx);
+        transfer::public_transfer(approval, request_id)
+    }
+
     public fun withdraw(provider_cap: &ProviderCap, provider: &mut Provider, ctx: &mut TxContext) {
         assert!(provider_cap.provider == object::uid_to_inner(&provider.id), ENotProviderOwner);
 
@@ -109,10 +127,27 @@ module suipass::provider {
         transfer::public_transfer(coin, tx_context::sender(ctx));
     }
 
+    public(friend) fun add_request(provider: &mut Provider, request_by: address, proof: vector<u8>) {
+        let req = Request {
+            request_by,
+            proof: string::utf8(proof)
+        };
+
+        table::add(&mut provider.requests, request_by, req);
+    }
+
+    public fun add_balance(provider: &mut Provider, coin: coin::Coin<SUI>) {
+        coin::put(&mut provider.balance, coin)
+    }
+
     // TODO: We will handle update later 
 
     public fun id(provider: &Provider): ID {
         object::uid_to_inner(&provider.id)
+    }
+
+    public fun id_from_cap(cap: &ProviderCap): ID {
+        cap.provider
     }
 
     public fun score(provider: &Provider): u16 {
@@ -122,6 +157,11 @@ module suipass::provider {
     public fun total_levels(provider: &Provider): u16 { 
         provider.total_levels
     }
+
+    public fun submit_fee(provider: &Provider): u64 {
+        provider.submit_fee
+    }
+
 
     public(friend) fun create_provider(
         name: vector<u8>,

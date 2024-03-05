@@ -21,7 +21,7 @@ module suipass::approval {
     }
 
     // only suipass owner can create a provider
-    public(friend) fun new(
+    public fun new(
         provider:ID,
         level: u16,
         evidence: vector<u8>,
