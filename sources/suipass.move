@@ -110,17 +110,31 @@ module suipass::suipass {
         provider::update_score(provider, score);
     }
 
+    /* WARN: deprecated */
     public fun submit_request(
         _user: &mut User,
         suipass: &mut SuiPass,
         provider_id: ID,
-        request_by: address,
+        _request_by: address,
         proof: vector<u8>,
         coin: &mut coin::Coin<SUI>,
         ctx: &mut TxContext
     ) {
+        assert_provider_exist(suipass, provider_id);
         let provider = vec_map::get_mut(&mut suipass.providers, &provider_id);
-        provider::submit_request(provider, request_by, proof, coin, ctx);
+        provider::submit_request(provider, tx_context::sender(ctx), proof, coin, ctx);
+    }
+
+    public fun submit_request_v1(
+        suipass: &mut SuiPass,
+        provider_id: ID,
+        proof: vector<u8>,
+        coin: &mut coin::Coin<SUI>,
+        ctx: &mut TxContext
+    ) {
+        assert_provider_exist(suipass, provider_id);
+        let provider = vec_map::get_mut(&mut suipass.providers, &provider_id);
+        provider::submit_request(provider, tx_context::sender(ctx), proof, coin, ctx);
     }
 
     public fun resolve_request(

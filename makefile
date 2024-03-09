@@ -1,6 +1,6 @@
 ORIGINAL_PACKAGE_ADDR="0xe17ae2684e56530316fff23319f43523f447a4772d740ec4629897228df20f55"
 
-PACKAGE_ADDR="0xedc73afdf0eae447167519c6484f1067f6f11e036c1642657c4c378010bc2902"
+PACKAGE_ADDR="0xe917e4af4c5ccb402379770ebbf29d9da10ec178b7eae2aa8eca1a3fba89bbb1"
 UPGRADE_CAP="0x87753ca7dde1e8a76eb4237ab107287149955cad9040005a1b542c3d06105864"
 
 ADDR="0x57f105ec99c91f40b2a80b2bca774d81e197cb7032c97f0518ada7121f8f4b69"
@@ -28,7 +28,7 @@ faucet:
 publish: owner
 	sui client publish --json --gas-budget ${GAS} build/suipass
 
-upgrade: owner
+upgrade: owner pbuild
 	sui client upgrade --gas-budget ${GAS} --json --upgrade-capability ${UPGRADE_CAP}
 
 add_provider:
