@@ -54,7 +54,10 @@ module suipass::provider {
     // Level 3: cur_ts - joined_date >= 3 years
     // Hopefully we are able to update the contract to change these conditions
 
-    struct ProviderCap has key, store {id: UID, provider: ID}
+    struct ProviderCap has key, store {
+        id: UID,
+        provider: ID
+    }
 
     // TODO: require coin to call this method
     public(friend) fun submit_request(

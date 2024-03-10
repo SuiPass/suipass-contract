@@ -8,6 +8,7 @@ module suipass::suipass {
     use sui::balance::{Self, Balance};
     use sui::coin::{Self, Coin};
     use std::vector;
+    use sui::event;
 
     use sui::table::{Self, Table};
     use sui::vec_set::{Self, VecSet};
@@ -32,6 +33,10 @@ module suipass::suipass {
     const EProviderAlreadyExist: u64 = 1;
     const EUsernotQualified: u64 = 2;
     const ENotAdmin: u64 = 3;
+
+    //==============================================================================================
+    // Module Structs
+    //==============================================================================================
 
     // This struct store supported providers and their score
     struct SuiPass has key, store {
@@ -62,6 +67,30 @@ module suipass::suipass {
         id: UID,
     }
 
+    //==============================================================================================
+    // Event structs
+    //==============================================================================================
+
+    /*
+        Event to be emitted when a provider is added.
+        @param shop_id - The id of the shop object.
+        @param shop_owner_cap_id - The id of the shop owner capability object.
+    */
+    struct ProviderAdded has copy, drop {
+        provider_id: ID,
+        provider_cap_id: ID,
+    }
+
+    struct RequestSubmitted has copy, drop {
+        provider_id: ID,
+        requester: address,
+        request_id: address
+    }
+
+    //==============================================================================================
+    // Functions
+    //==============================================================================================
+
     fun init(ctx: &mut TxContext) {
         transfer::transfer(AdminCap {
             id: object::new(ctx),
@@ -88,10 +117,15 @@ module suipass::suipass {
         ctx: &mut TxContext
     ) {
         let (id, provider_cap, provider) = provider::create_provider(name, submit_fee, update_fee, total_levels, score, ctx);
+        let event = ProviderAdded {
+           provider_id: id,
+           provider_cap_id: provider::id_from_cap(&provider_cap)
+        };
 
         assert!(!vec_map::contains(&suipass.providers, &id), EProviderAlreadyExist);
         vec_map::insert(&mut suipass.providers, id, provider);
-        transfer::public_transfer(provider_cap, owner)
+        transfer::public_transfer(provider_cap, owner);
+        event::emit(event);
     }
 
     // public fun remove_provider(_: &AdminCap, suipass: &mut SuiPass, provider: &Provider, _: &mut TxContext) {
@@ -110,22 +144,7 @@ module suipass::suipass {
         provider::update_score(provider, score);
     }
 
-    /* WARN: deprecated */
     public fun submit_request(
-        _user: &mut User,
-        suipass: &mut SuiPass,
-        provider_id: ID,
-        _request_by: address,
-        proof: vector<u8>,
-        coin: &mut coin::Coin<SUI>,
-        ctx: &mut TxContext
-    ) {
-        assert_provider_exist(suipass, provider_id);
-        let provider = vec_map::get_mut(&mut suipass.providers, &provider_id);
-        provider::submit_request(provider, tx_context::sender(ctx), proof, coin, ctx);
-    }
-
-    public fun submit_request_v1(
         suipass: &mut SuiPass,
         provider_id: ID,
         proof: vector<u8>,
@@ -134,7 +153,13 @@ module suipass::suipass {
     ) {
         assert_provider_exist(suipass, provider_id);
         let provider = vec_map::get_mut(&mut suipass.providers, &provider_id);
-        provider::submit_request(provider, tx_context::sender(ctx), proof, coin, ctx);
+        let requester = tx_context::sender(ctx);
+        provider::submit_request(provider, requester, proof, coin, ctx);
+        event::emit(RequestSubmitted {
+            provider_id,
+            requester,
+            request_id: requester
+        });
     }
 
     public fun resolve_request(
