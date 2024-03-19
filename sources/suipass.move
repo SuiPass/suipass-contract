@@ -87,6 +87,12 @@ module suipass::suipass {
         request_id: address
     }
 
+    struct RequestResolved has copy, drop {
+        provider_id: ID,
+        requester: address,
+        request_id: address
+    }
+
     //==============================================================================================
     // Functions
     //==============================================================================================
@@ -172,6 +178,10 @@ module suipass::suipass {
     ) {
         let provider = vec_map::get_mut(&mut suipass.providers, &provider::id_from_cap(provider_cap));
         provider::resolve_request_internal(provider_cap, provider, request, evidence, level, ctx);
+        // event::emit(RequestResolved {
+        //     provider_id,
+        //     request_id: request
+        // });
     }
 
     public fun get_provider_score(suipass: &SuiPass, provider: &Provider, _: &mut TxContext): u16 {

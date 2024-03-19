@@ -5,12 +5,11 @@ module suipass::provider {
     use sui::tx_context::{Self, TxContext};
     use sui::sui::SUI;
     use sui::balance::{Self, Balance};
-    use sui::coin::{Self, Coin};
+    use sui::coin;
     use sui::table::{Self, Table};
 
     use std::vector;
 
-    use suipass::user::{User};
     use suipass::approval;
 
     friend suipass::suipass;
@@ -94,11 +93,17 @@ module suipass::provider {
     ) {
         assert!(provider_cap.provider == object::uid_to_inner(&provider.id), ENotProviderOwner);
         assert!(table::contains(&provider.requests, request_id), EInvalidRequest);
-        table::remove(&mut provider.requests, request_id);
         assert!(vector::length(&evidence) > 0, ERequestRejected);
 
         let issued_date = tx_context::epoch_timestamp_ms(ctx);
 
+        let requester;
+        {
+            let request = table::borrow(&provider.requests, request_id);
+            requester = request.request_by;
+        };
+
+        table::remove(&mut provider.requests, request_id);
         let approval = approval::new(id(provider), level, evidence, issued_date, ctx);
         transfer::public_transfer(approval, request_id)
     }
@@ -147,6 +152,10 @@ module suipass::provider {
 
     public fun id(provider: &Provider): ID {
         object::uid_to_inner(&provider.id)
+    }
+
+    public fun cap_id(cap: &ProviderCap): ID {
+        object::uid_to_inner(&cap.id)
     }
 
     public fun id_from_cap(cap: &ProviderCap): ID {
