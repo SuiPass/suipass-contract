@@ -216,6 +216,11 @@ module suipass::suipass {
         result
     }
 
+    public fun is_human(suiPass: &SuiPass, user: &User, ctx: &mut TxContext): bool {
+        let score = calculate_user_score(suiPass, user, ctx);
+        score >= suiPass.threshold
+    }
+
     public fun mint_passport(suipass: &SuiPass, user: &mut User, ctx: &mut TxContext) {
         let score = calculate_user_score(suipass, user, ctx);
 
