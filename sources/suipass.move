@@ -7,7 +7,7 @@ module suipass::suipass {
     use sui::sui::SUI;
     use sui::coin;
     use sui::event;
-    use std::string;
+    use std::address;
     use sui::vec_map::{Self, VecMap};
 
     use suipass::provider::{Self, Provider, ProviderCap};
@@ -77,7 +77,7 @@ module suipass::suipass {
     struct RequestResolved has copy, drop {
         provider_id: ID,
         requester: address,
-        request_id: string::String
+        request_id: address
     }
 
     //======================================================================
@@ -159,12 +159,11 @@ module suipass::suipass {
     public fun resolve_request(
         provider_cap: &ProviderCap,
         suipass: &mut SuiPass,
-        request_id: vector<u8>,
+        request_id: address,
         evidence: vector<u8>,
         level: u16,
         ctx: &mut TxContext
     ) {
-        let request_id = string::utf8(request_id);
         let provider = vec_map::get_mut(&mut suipass.providers, &provider::id_from_cap(provider_cap));
         let request = provider::resolve_request(provider_cap, provider, &request_id, evidence, level, ctx);
         event::emit(RequestResolved {

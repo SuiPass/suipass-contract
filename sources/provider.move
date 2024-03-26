@@ -10,6 +10,7 @@ module suipass::provider {
     use sui::coin;
     use sui::address;
     use sui::vec_map::{Self, VecMap};
+    use sui::hash;
 
     use suipass::approval;
 
@@ -40,8 +41,8 @@ module suipass::provider {
         max_level: u16,
         max_score: u16,
 
-        requests: VecMap<String ,Request>,
-        records: VecMap<String , Record>,
+        requests: VecMap<address, Request>,
+        records: VecMap<address, Record>,
     }
 
     struct Request has store, drop {
@@ -147,7 +148,7 @@ module suipass::provider {
         proof: vector<u8>,
         coin: &mut coin::Coin<SUI>,
         ctx: &mut TxContext
-    ): String {
+    ): address {
         let balance = coin::balance_mut(coin);
 
         if (balance::value(balance) < provider.submit_fee) {
@@ -157,7 +158,8 @@ module suipass::provider {
         let coin = coin::take(balance, provider.submit_fee, ctx);
         coin::put(&mut provider.balance, coin);
 
-        let key = address::to_string(requester);
+        // TODO: Concat with other thing to change the constraint of an request
+        let key = address::from_bytes(hash::blake2b256(&address::to_bytes(requester)));
         let req = Request {
             requester,
             proof: string::utf8(proof)
@@ -171,7 +173,7 @@ module suipass::provider {
     public(friend) fun resolve_request(
         provider_cap: &ProviderCap,
         provider: &mut Provider,
-        request_id: &String,
+        request_id: &address,
         evidence: vector<u8>,
         level: u16,
         ctx: &mut TxContext
@@ -181,8 +183,9 @@ module suipass::provider {
         assert!(vector::length(&evidence) > 0, ERequestRejected);
 
         let (_, request) = vec_map::remove(&mut provider.requests, request_id);
+    
         let record = Record { level, evidence: string::utf8(evidence) };
-        vec_map::insert(&mut provider.records, address::to_string(request.requester), record);
+        vec_map::insert(&mut provider.records, request.requester, record);
 
         let issued_date = tx_context::epoch_timestamp_ms(ctx);
 
