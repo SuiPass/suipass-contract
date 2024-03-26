@@ -1,27 +1,17 @@
 module suipass::suipass {
+    use std::vector;
+
     use sui::object::{Self, UID, ID};
-    use std::string::{Self, String};
     use sui::transfer;
     use sui::tx_context::{Self, TxContext};
     use sui::sui::SUI;
-    use sui::clock::{Self, Clock};
-    use sui::balance::{Self, Balance};
-    use sui::coin::{Self, Coin};
-    use std::vector;
+    use sui::coin;
     use sui::event;
-
-    use sui::table::{Self, Table};
-    use sui::vec_set::{Self, VecSet};
-
+    use std::string;
     use sui::vec_map::{Self, VecMap};
 
     use suipass::provider::{Self, Provider, ProviderCap};
     use suipass::user::{Self, User};
-
-    #[test_only]
-    use sui::test_scenario;
-    #[test_only]
-    use sui::test_utils::assert_eq;
 
     // This module sumarizes all supported credits,
     // allows users to mint their passport NFT (Need to check if NFT can be updated, OR users will hold a lot of passports since their credit can be expire)
@@ -32,18 +22,15 @@ module suipass::suipass {
     const EProviderNotExist: u64 = 0;
     const EProviderAlreadyExist: u64 = 1;
     const EUsernotQualified: u64 = 2;
-    const ENotAdmin: u64 = 3;
 
-    //==============================================================================================
+    //======================================================================
     // Module Structs
-    //==============================================================================================
+    //======================================================================
 
-    // This struct store supported providers and their score
+    // This struct store supported providers and others config
     struct SuiPass has key, store {
         id: UID,
         providers: VecMap<ID, Provider>,
-        // providers: VecSet<address>,
-        // providers_data: Table<address, Provider>,
         threshold: u16,
         expiration_period: u64
     }
@@ -67,14 +54,14 @@ module suipass::suipass {
         id: UID,
     }
 
-    //==============================================================================================
-    // Event structs
-    //==============================================================================================
+    //======================================================================
+    // Event Structs
+    //======================================================================
 
     /*
         Event to be emitted when a provider is added.
-        @param shop_id - The id of the shop object.
-        @param shop_owner_cap_id - The id of the shop owner capability object.
+        @param provider_id - The id of the provider object.
+        @param provider_cap_id - The id of the provider capability object.
     */
     struct ProviderAdded has copy, drop {
         provider_id: ID,
@@ -90,12 +77,12 @@ module suipass::suipass {
     struct RequestResolved has copy, drop {
         provider_id: ID,
         requester: address,
-        request_id: address
+        request_id: string::String
     }
 
-    //==============================================================================================
+    //======================================================================
     // Functions
-    //==============================================================================================
+    //======================================================================
 
     fun init(ctx: &mut TxContext) {
         transfer::transfer(AdminCap {
@@ -105,7 +92,6 @@ module suipass::suipass {
         transfer::share_object(SuiPass {
             id: object::new(ctx),
             providers: vec_map::empty(),
-            // providers_data: table::new<address, Provider>(ctx),
             threshold: DEFAULT_THRESHOLD,
             expiration_period: DEFAULT_EXPIRATION_PERIOD
         });
@@ -122,14 +108,16 @@ module suipass::suipass {
         score: u16,
         ctx: &mut TxContext
     ) {
-        let (id, provider_cap, provider) = provider::create_provider(name, submit_fee, update_fee, total_levels, score, ctx);
+        let (provider_cap, provider) = provider::create_provider(name, submit_fee, update_fee, total_levels, score, ctx);
+
+        let provider_id = provider::id(&provider);
         let event = ProviderAdded {
-           provider_id: id,
-           provider_cap_id: provider::id_from_cap(&provider_cap)
+           provider_id,
+           provider_cap_id: provider::cap_id(&provider_cap)
         };
 
-        assert!(!vec_map::contains(&suipass.providers, &id), EProviderAlreadyExist);
-        vec_map::insert(&mut suipass.providers, id, provider);
+        assert!(!vec_map::contains(&suipass.providers, &provider_id), EProviderAlreadyExist);
+        vec_map::insert(&mut suipass.providers, provider_id, provider);
         transfer::public_transfer(provider_cap, owner);
         event::emit(event);
     }
@@ -147,7 +135,7 @@ module suipass::suipass {
         assert_provider_exist(suipass, id);
 
         let provider = vec_map::get_mut(&mut suipass.providers, &id);
-        provider::update_score(provider, score);
+        provider::update_max_score(provider, score);
     }
 
     public fun submit_request(
@@ -171,23 +159,25 @@ module suipass::suipass {
     public fun resolve_request(
         provider_cap: &ProviderCap,
         suipass: &mut SuiPass,
-        request: address,
+        request_id: vector<u8>,
         evidence: vector<u8>,
         level: u16,
         ctx: &mut TxContext
     ) {
+        let request_id = string::utf8(request_id);
         let provider = vec_map::get_mut(&mut suipass.providers, &provider::id_from_cap(provider_cap));
-        provider::resolve_request_internal(provider_cap, provider, request, evidence, level, ctx);
-        // event::emit(RequestResolved {
-        //     provider_id,
-        //     request_id: request
-        // });
+        let request = provider::resolve_request(provider_cap, provider, &request_id, evidence, level, ctx);
+        event::emit(RequestResolved {
+            provider_id: provider::id(provider),
+            requester: provider::requester(&request),
+            request_id
+        });
     }
 
     public fun get_provider_score(suipass: &SuiPass, provider: &Provider, _: &mut TxContext): u16 {
         let id = provider::id(provider);
         assert_provider_exist(suipass, id);
-        provider::score(vec_map::get(&suipass.providers, &id))
+        provider::max_score(vec_map::get(&suipass.providers, &id))
     }
 
     public fun calculate_user_score(suiPass: &SuiPass, user: &User, _: &mut TxContext): u16 {
@@ -205,8 +195,8 @@ module suipass::suipass {
             let level = *vec_map::get(&levels, id);
 
             let provider = vec_map::get(&suiPass.providers, id);
-            let max_score = provider::score(provider);
-            let total_levels = provider::total_levels(provider);
+            let max_score = provider::max_score(provider);
+            let total_levels = provider::max_level(provider);
 
             let increase = (level / total_levels * max_score);
 
@@ -221,30 +211,30 @@ module suipass::suipass {
         score >= suiPass.threshold
     }
 
-    public fun mint_passport(suipass: &SuiPass, user: &mut User, ctx: &mut TxContext) {
+    public fun mint_passport(suipass: &SuiPass, user: &mut User, ctx: &mut TxContext): NFTPassportMetadata {
         let score = calculate_user_score(suipass, user, ctx);
 
         assert!(score >= suipass.threshold, EUsernotQualified);
 
         let issued_date = tx_context::epoch_timestamp_ms(ctx);
 
-        transfer::public_transfer(NFTPassportMetadata {
+        NFTPassportMetadata {
             id: object::new(ctx),
             issued_date,
             expiration_date: issued_date + suipass.expiration_period, 
             score,
             threshold: suipass.threshold
-        }, tx_context::sender(ctx));
+        }
     }
 
-    //==============================================================================================
+    //======================================================================
     // Validation functions - Add your validation functions here (if any)
-    //==============================================================================================
+    //======================================================================
     fun assert_provider_exist(suipass: &SuiPass, provider_id: ID) {
         assert!(vec_map::contains(&suipass.providers, &provider_id), EProviderNotExist);
     }
 
-    //==============================================================================================
-    // Tests - DO NOT MODIFY
-    //==============================================================================================
+    //======================================================================
+    // Tests
+    //======================================================================
 }
