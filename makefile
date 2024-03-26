@@ -21,16 +21,22 @@ key-list:
 	sui keytool list
 
 owner:
-	sui client switch --address ${ADDR}
+	@sui client switch --address test #{ADDR}
 
 faucet:
 	ADDR=${ADDR} sh ./scripts/faucet.sh
 
 publish: owner
-	sui client publish --json --gas-budget ${GAS} build/suipass
+	@sui client publish --json --gas-budget ${GAS} build/suipass > temp/deploy.json
+	@export DATA=temp/deploy.json \
+		&& export OUTPUT=.env.deploy \
+		&& sh scripts/extract.sh
 
 upgrade: owner pbuild
-	sui client upgrade --gas-budget ${GAS} --json --upgrade-capability ${UPGRADE_CAP}
+	sui client upgrade --gas-budget ${GAS} --json --upgrade-capability ${UPGRADE_CAP} > temp/upgrade.json
+	@export DATA=temp/upgrade.json \
+		&& export OUTPUT=.env.upgrade \
+		&& sh scripts/extract.sh
 
 suipass:
 	sui client object --json "${SUIPASS_ADDR}" | jq .
