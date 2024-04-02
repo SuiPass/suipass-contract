@@ -7,7 +7,6 @@ module suipass::suipass {
     use sui::sui::SUI;
     use sui::coin;
     use sui::event;
-    use std::address;
     use sui::vec_map::{Self, VecMap};
 
     use suipass::provider::{Self, Provider, ProviderCap};
@@ -102,13 +101,14 @@ module suipass::suipass {
         suipass: &mut SuiPass, 
         owner: address,
         name: vector<u8>,
+        metadata: vector<u8>,
         submit_fee: u64,
         update_fee: u64,
         total_levels: u16,
         score: u16,
         ctx: &mut TxContext
     ) {
-        let (provider_cap, provider) = provider::create_provider(name, submit_fee, update_fee, total_levels, score, ctx);
+        let (provider_cap, provider) = provider::create_provider(name, metadata, submit_fee, update_fee, total_levels, score, ctx);
 
         let provider_id = provider::id(&provider);
         let event = ProviderAdded {
@@ -148,11 +148,11 @@ module suipass::suipass {
         assert_provider_exist(suipass, provider_id);
         let provider = vec_map::get_mut(&mut suipass.providers, &provider_id);
         let requester = tx_context::sender(ctx);
-        provider::submit_request(provider, requester, proof, coin, ctx);
+        let request_id = provider::submit_request(provider, requester, proof, coin, ctx);
         event::emit(RequestSubmitted {
             provider_id,
             requester,
-            request_id: requester
+            request_id
         });
     }
 

@@ -1,10 +1,10 @@
-ORIGINAL_PACKAGE_ADDR="0xc06eb9bbfb181618f0a6017a638402e346805034431c3a0873a5d63bcd2d034e"
+ORIGINAL_PACKAGE_ADDR="0xfb716597619494de6f2c5b8b82b5947f530dab82f63009e4027e126b8f3d9787"
 
-PACKAGE_ADDR="0xc06eb9bbfb181618f0a6017a638402e346805034431c3a0873a5d63bcd2d034e"
-UPGRADE_CAP="0x6f6e3476fcbf9572a8bd24b7a0d9d5d2a00dc183c75e6a5ce3c93c6d578774de"
+PACKAGE_ADDR="0xfb716597619494de6f2c5b8b82b5947f530dab82f63009e4027e126b8f3d9787"
+UPGRADE_CAP="0x492145c7bc5fd925a966862af320ee3656ff89755278c65dd5bf41ad4d4867f6"
 ADDR="0x57f105ec99c91f40b2a80b2bca774d81e197cb7032c97f0518ada7121f8f4b69"
-SUIPASS_ADDR="0x34c61899bdd365d8b90f374530c4f31c698f34f8fdfd914143d242c2b283f395"
-ADMIN_CAP="0x4d0cf2c2b77a23003804355e6796abacf7365682a12c43cf01583c9e01dc2add"
+SUIPASS_ADDR="0x97b873c6ebae75bd98ec5aa41d3b356f349def5f014d7a0599812ee035a55271"
+ADMIN_CAP="0x84b876a71a717f075705aeced221c6ae70d8c0714b329b5d747efc4c3b449d5a"
 
 GITHUB_OWNER="0xed6f09f1f6bdc991edc10d3c82418aefc53cf6824ca23a44df4caea48a70b182"
 GITHUB_CAP="0x7a60394f5d9e698fd86d26e96319ddf41daeaf87cba421e71183e1f5e4d26a19"
@@ -14,7 +14,15 @@ GAS=100000000
 
 USER="0x9a2545cd5b2a0c9aa189842841e272133007093c1ff0d4a981d856bc2c22e31a"
 
-pbuild:
+.PHONY: test
+.PHONY: clean
+.PHONY: build
+.PHONY: all
+
+test:
+	sui move test
+
+build:
 	sui move build
 
 key-list:
@@ -26,13 +34,13 @@ owner:
 faucet:
 	ADDR=${ADDR} sh ./scripts/faucet.sh
 
-publish: owner
+publish: test build owner
 	@sui client publish --json --gas-budget ${GAS} build/suipass > temp/deploy.json
 	@export DATA=temp/deploy.json \
 		&& export OUTPUT=.env.deploy \
 		&& sh scripts/extract.sh
 
-upgrade: owner pbuild
+upgrade: owner build
 	sui client upgrade --gas-budget ${GAS} --json --upgrade-capability ${UPGRADE_CAP} > temp/upgrade.json
 	@export DATA=temp/upgrade.json \
 		&& export OUTPUT=.env.upgrade \
@@ -52,21 +60,7 @@ new_user:
 		--json
 
 add_provider:
-	sui client call \
-		--function add_provider \
-		--module suipass \
-		--package ${PACKAGE_ADDR} \
-		--json \
-		--args \
-			${ADMIN_CAP} \
-			${SUIPASS_ADDR} \
-			${GITHUB_OWNER} \
-			"Github" \
-			100 \
-			50 \
-			5 \
-			1000 \
-		--gas-budget 100000000
+	sh ./scripts/load_provider.sh
 
 submit_request:
 	sui client call \
@@ -95,4 +89,3 @@ resolve_request:
 		"evidence ne" \
 		2 \
 		--gas-budget 100000000
-		

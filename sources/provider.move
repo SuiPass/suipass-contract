@@ -34,6 +34,8 @@ module suipass::provider {
     struct Provider has store, key {
         id: UID,
         name: String,
+        metadata: String,
+
         submit_fee: u64, // Fee for creating submission
         update_fee: u64,
         balance: Balance<SUI>,
@@ -51,8 +53,10 @@ module suipass::provider {
     }
 
     struct Record has store, drop {
+        requester: address,
         level: u16,
         evidence: String,
+        issued_date: u64
     }
 
     //======================================================================
@@ -109,6 +113,7 @@ module suipass::provider {
 
     public(friend) fun create_provider(
         name: vector<u8>,
+        metadata: vector<u8>,
         submit_fee: u64,
         update_fee: u64,
         max_level: u16,
@@ -124,6 +129,7 @@ module suipass::provider {
         let provider = Provider {
             id: uid,
             name: string::utf8(name),
+            metadata: string::utf8(metadata),
             submit_fee,
             update_fee,
             balance: balance::zero(),
@@ -173,21 +179,30 @@ module suipass::provider {
     public(friend) fun resolve_request(
         provider_cap: &ProviderCap,
         provider: &mut Provider,
-        request_id: &address,
+        requester: &address, // HACK: request_id
         evidence: vector<u8>,
         level: u16,
         ctx: &mut TxContext
     ): Request {
+        // HACK: Trick the request id
+        let request_id = &address::from_bytes(hash::blake2b256(&address::to_bytes(*requester)));
+
         assert!(provider_cap.provider == object::uid_to_inner(&provider.id), ENotProviderOwner);
         assert!(vec_map::contains(&provider.requests, request_id), EInvalidRequest);
         assert!(vector::length(&evidence) > 0, ERequestRejected);
 
         let (_, request) = vec_map::remove(&mut provider.requests, request_id);
     
-        let record = Record { level, evidence: string::utf8(evidence) };
-        vec_map::insert(&mut provider.records, request.requester, record);
-
         let issued_date = tx_context::epoch_timestamp_ms(ctx);
+        let record = Record { requester: *requester, level, evidence: string::utf8(evidence), issued_date };
+
+        if (vec_map::contains(&provider.records, &request.requester)) {
+            let cur = vec_map::get_mut(&mut provider.records, &request.requester);
+            *cur = record;
+        } else {
+            vec_map::insert(&mut provider.records, request.requester, record);
+        };
+
 
         let approval = approval::new(id(provider), level, evidence, issued_date, ctx);
         transfer::public_transfer(approval, request.requester);
