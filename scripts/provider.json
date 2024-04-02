@@ -1,5 +1,17 @@
 [
   {
+    "name": "Github",
+    "metadata": {
+      "desc": "Connect to Github to verify your code contributions.",
+      "logoUrl": "https://firebasestorage.googleapis.com/v0/b/suipass.appspot.com/o/github-logo.svg?alt=media&token=dab461ae-6eb0-42fc-a41e-5c65de6f948c"
+    },
+    "submitFee": 99,
+    "updateFee": 49,
+    "totalLevels": 4,
+    "score": 999,
+    "owner": "0xed6f09f1f6bdc991edc10d3c82418aefc53cf6824ca23a44df4caea48a70b182"
+  },
+  {
     "name": "Twitter",
     "metadata": {
       "desc": "Connect to X to verify your social media presence.",
