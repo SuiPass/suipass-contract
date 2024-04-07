@@ -160,10 +160,9 @@ module suipass::suipass {
         provider_cap: &ProviderCap,
         suipass: &mut SuiPass,
         request_id: address,
-        ctx: &mut TxContext
     ) {
         let provider = vec_map::get_mut(&mut suipass.providers, &provider::id_from_cap(provider_cap));
-        let request = provider::resolve_request(provider_cap, provider, &request_id, evidence, level, ctx);
+        let request = provider::reject_request(provider_cap, provider, &request_id);
         event::emit(RequestResolved {
             provider_id: provider::id(provider),
             requester: provider::requester(&request),

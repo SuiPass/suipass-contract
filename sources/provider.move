@@ -213,14 +213,12 @@ module suipass::provider {
         provider_cap: &ProviderCap,
         provider: &mut Provider,
         requester: &address, // HACK: request_id
-        ctx: &mut TxContext
     ): Request {
         // HACK: Trick the request id
         let request_id = &address::from_bytes(hash::blake2b256(&address::to_bytes(*requester)));
 
         assert!(provider_cap.provider == object::uid_to_inner(&provider.id), ENotProviderOwner);
         assert!(vec_map::contains(&provider.requests, request_id), EInvalidRequest);
-        assert!(vector::length(&evidence) > 0, ERequestRejected);
 
         let (_, request) = vec_map::remove(&mut provider.requests, request_id);
     
