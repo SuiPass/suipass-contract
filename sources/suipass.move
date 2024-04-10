@@ -1,5 +1,6 @@
 module suipass::suipass {
     use std::vector;
+    use std::option::{Option};
 
     use sui::object::{Self, UID, ID};
     use sui::transfer;
@@ -122,6 +123,19 @@ module suipass::suipass {
         event::emit(event);
     }
 
+    public fun update_provider(
+        provider_cap: &ProviderCap,
+        suipass: &mut SuiPass, 
+        metadata: Option<vector<u8>>,
+        submit_fee: Option<u64>,
+        update_fee: Option<u64>,
+        total_levels: Option<u16>,
+    ) {
+        assert_provider_exist(suipass, provider::id_from_cap(provider_cap));
+        let provider = vec_map::get_mut(&mut suipass.providers, &provider::id_from_cap(provider_cap)); 
+        provider::update_info(provider, metadata, submit_fee, update_fee, total_levels);
+    }
+
     // public fun remove_provider(_: &AdminCap, suipass: &mut SuiPass, provider: &Provider, _: &mut TxContext) {
     //     let id = provider::id(provider);
     //     assert_provider_exist(suipass, id);
@@ -130,11 +144,16 @@ module suipass::suipass {
     //     // table::remove(&mut suipass.providers_data, provider);
     // }
 
-    public fun update_provider_score(_: &AdminCap, suipass: &mut SuiPass, provider: &Provider, score: u16, _: &mut TxContext) {
-        let id = provider::id(provider);
-        assert_provider_exist(suipass, id);
+    public fun update_provider_score(
+        _: &AdminCap,
+        suipass: &mut SuiPass,
+        provider_id: ID,
+        score: u16,
+        _: &mut TxContext
+    ) {
+        assert_provider_exist(suipass, provider_id);
 
-        let provider = vec_map::get_mut(&mut suipass.providers, &id);
+        let provider = vec_map::get_mut(&mut suipass.providers, &provider_id);
         provider::update_max_score(provider, score);
     }
 
@@ -156,20 +175,6 @@ module suipass::suipass {
         });
     }
 
-    public fun reject_request(
-        provider_cap: &ProviderCap,
-        suipass: &mut SuiPass,
-        request_id: address,
-    ) {
-        let provider = vec_map::get_mut(&mut suipass.providers, &provider::id_from_cap(provider_cap));
-        let request = provider::reject_request(provider_cap, provider, &request_id);
-        event::emit(RequestResolved {
-            provider_id: provider::id(provider),
-            requester: provider::requester(&request),
-            request_id
-        });
-    }
-
     public fun resolve_request(
         provider_cap: &ProviderCap,
         suipass: &mut SuiPass,
@@ -180,6 +185,20 @@ module suipass::suipass {
     ) {
         let provider = vec_map::get_mut(&mut suipass.providers, &provider::id_from_cap(provider_cap));
         let request = provider::resolve_request(provider_cap, provider, &request_id, evidence, level, ctx);
+        event::emit(RequestResolved {
+            provider_id: provider::id(provider),
+            requester: provider::requester(&request),
+            request_id
+        });
+    }
+
+    public fun reject_request(
+        provider_cap: &ProviderCap,
+        suipass: &mut SuiPass,
+        request_id: address,
+    ) {
+        let provider = vec_map::get_mut(&mut suipass.providers, &provider::id_from_cap(provider_cap));
+        let request = provider::reject_request(provider_cap, provider, &request_id);
         event::emit(RequestResolved {
             provider_id: provider::id(provider),
             requester: provider::requester(&request),

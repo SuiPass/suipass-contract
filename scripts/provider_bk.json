@@ -22,8 +22,8 @@
     },
     "submitFee": 99,
     "updateFee": 49,
-    "totalLevels": 3,
-    "score": 270,
+    "totalLevels": 4,
+    "score": 300,
     "owner": "0xed6f09f1f6bdc991edc10d3c82418aefc53cf6824ca23a44df4caea48a70b182"
   },
   {
@@ -54,7 +54,7 @@
     "submitFee": 500,
     "updateFee": 100,
     "totalLevels": 4,
-    "score": 220,
+    "score": 200,
     "owner": "0xed6f09f1f6bdc991edc10d3c82418aefc53cf6824ca23a44df4caea48a70b182"
   },
   {
@@ -83,13 +83,83 @@
         {
           "desc": "Created at least 365 x3 days ago",
           "level": 5
+        },
+        {
+          "desc": "Created at least 365 x4 days ago",
+          "level": 6
         }
       ]
     },
     "submitFee": 700,
     "updateFee": 500,
-    "totalLevels": 5,
-    "score": 150,
+    "totalLevels": 6,
+    "score": 200,
+    "owner": "0xed6f09f1f6bdc991edc10d3c82418aefc53cf6824ca23a44df4caea48a70b182"
+  },
+  {
+    "cap": "LINKEDIN_CAP",
+    "name": "LinkedIn",
+    "metadata": {
+      "desc": "Connect your existing Linkedin account to verify.",
+      "logoUrl": "https://firebasestorage.googleapis.com/v0/b/suipass.appspot.com/o/linkedin-logo.svg?alt=media&token=cfb90635-8400-414d-9b33-21a8c33e9381",
+      "levels": [
+        {
+          "desc": "Created at least 90 days ago",
+          "level": 1
+        },
+        {
+          "desc": "Created at least 180 days ago",
+          "level": 2
+        },
+        {
+          "desc": "Created at least 365 days ago",
+          "level": 3
+        },
+        {
+          "desc": "Created at least 365 x2 days ago",
+          "level": 4
+        },
+        {
+          "desc": "Created at least 365 x3 days ago",
+          "level": 5
+        },
+        {
+          "desc": "Created at least 365 x4 days ago",
+          "level": 6
+        },
+        {
+          "desc": "Created at least 365 x5 days ago",
+          "level": 7
+        }
+      ]
+    },
+    "submitFee": 600,
+    "updateFee": 300,
+    "totalLevels": 7,
+    "score": 7000,
+    "owner": "0xed6f09f1f6bdc991edc10d3c82418aefc53cf6824ca23a44df4caea48a70b182"
+  },
+  {
+    "cap": "VERISOUL_CAP",
+    "name": "Verisoul",
+    "metadata": {
+      "desc": "Connect to Verisoul to verify your human identity.",
+      "logoUrl": "https://firebasestorage.googleapis.com/v0/b/suipass.appspot.com/o/verisoul-logo.svg?alt=media&token=e8297e3a-9d94-4002-8d59-6cb376029b1e",
+      "levels": [
+        {
+          "desc": "Verified using voice scan.",
+          "level": 1
+        },
+        {
+          "desc": "Verified using face scan.",
+          "level": 2
+        }
+      ]
+    },
+    "submitFee": 10000,
+    "updateFee": 8000,
+    "totalLevels": 2,
+    "score": 10000,
     "owner": "0xed6f09f1f6bdc991edc10d3c82418aefc53cf6824ca23a44df4caea48a70b182"
   },
   {

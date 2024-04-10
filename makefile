@@ -1,6 +1,6 @@
 ORIGINAL_PACKAGE_ADDR="0x98766e85ae3198e64493e7dd5b1a13fe876c5cd57c4f9a10537d3fe8e278e8d8"
 
-PACKAGE_ADDR="0x98766e85ae3198e64493e7dd5b1a13fe876c5cd57c4f9a10537d3fe8e278e8d8"
+PACKAGE_ADDR="0x31f1f61f755922aedb442b3daf19e0ac38ad61b149d36dca8f3cce80e3f97d7a"
 UPGRADE_CAP="0xf3260b9f63e8ddd46ff34cd69e0ddd879a0c27100782204e0f7581e780919f02"
 ADDR="0x57f105ec99c91f40b2a80b2bca774d81e197cb7032c97f0518ada7121f8f4b69"
 SUIPASS_ADDR="0x9247a7d49fc88a0f79ca9713a2c835dacad468a8b530a61c38ec1894b2642d97"
@@ -26,9 +26,9 @@ VERISOUL_OWNER="0xed6f09f1f6bdc991edc10d3c82418aefc53cf6824ca23a44df4caea48a70b1
 VERISOUL_CAP="0x1fbe54ba1f05f93fcc7ce639ac04b6c351012803ccc9ec9e535c0c3c82b54c12"
 VERISOUL_PROVIDER_ID="0xa98fb81058bf366ad953f593313fe438a7c82c3a1929cec31397e576f2498ac8"
 
-SUI_OWNER="0xed6f09f1f6bdc991edc10d3c82418aefc53cf6824ca23a44df4caea48a70b182"
-SUI_CAP="0xd0ff666d0abdccfb87456375076ade0c89c356c59054e50adfc6ff960c5f01e5"
-SUI_PROVIDER_ID="0x9e4700917ca3f6609474df1913f1a5871519357ddfcc39928d7c8c2de12c03cc"
+SUI_PROVIDER_OWNER="0xed6f09f1f6bdc991edc10d3c82418aefc53cf6824ca23a44df4caea48a70b182"
+SUI_PROVIDER_CAP="0xd0ff666d0abdccfb87456375076ade0c89c356c59054e50adfc6ff960c5f01e5"
+SUI_PROVIDER_PROVIDER_ID="0x9e4700917ca3f6609474df1913f1a5871519357ddfcc39928d7c8c2de12c03cc"
 
 GAS=100000000
 
@@ -58,7 +58,8 @@ publish: test build owner
 	@sui client publish --json --gas-budget ${GAS} build/suipass > temp/deploy.json
 	@export DATA=temp/deploy.json \
 		&& export OUTPUT=.env.deploy \
-		&& sh scripts/extract.sh
+		&& sh scripts/extract.sh \
+		&& sh scripts/load_provider.sh
 
 upgrade: owner build
 	sui client upgrade --gas-budget ${GAS} --json --upgrade-capability ${UPGRADE_CAP} > temp/upgrade.json
@@ -114,3 +115,21 @@ data:
 	sui client object --json 0x9247a7d49fc88a0f79ca9713a2c835dacad468a8b530a61c38ec1894b2642d97 > suipass-capture.json
 	sui client objects --json 0xed6f09f1f6bdc991edc10d3c82418aefc53cf6824ca23a44df4caea48a70b182 > provider-owner-capture.json
 	jq '[.[] | {id: .data.objectId, content: .data.content}]' provider-owner-capture.json > provider-owner-filtered.json
+
+update_metadata:
+	VAL='{"desc": "Verify SUI activity.", "logoUrl": "https://firebasestorage.googleapis.com/v0/b/suipass.appspot.com/o/sui-logo.svg?alt=media&token=29ad950f-70dd-4d96-a041-f240a9c0fa82",  "levels": [ { "desc": "The balance is higher than 1 SUI", "level": 1 }, { "desc": "Created at least 90 days ago and the balance is higher than 5 SUI", "level": 2 }, { "desc": "Created at least 365 days ago and the balance is higher than 10 SUI", "level": 3 } ] }'
+	echo $(VAL)
+
+	sui client call \
+		--function update_provider \
+		--module suipass \
+		--package ${PACKAGE_ADDR} \
+		--json \
+		--args \
+		${SUI_PROVIDER_CAP} \
+		${SUIPASS_ADDR} \
+		'["eyJkZXNjIjogIlZlcmlmeSBTVUkgYWN0aXZpdHkuIiwgImxvZ29VcmwiOiAiaHR0cHM6Ly9maXJlYmFzZXN0b3JhZ2UuZ29vZ2xlYXBpcy5jb20vdjAvYi9zdWlwYXNzLmFwcHNwb3QuY29tL28vc3VpLWxvZ28uc3ZnP2FsdD1tZWRpYSZ0b2tlbj0yOWFkOTUwZi03MGRkLTRkOTYtYTA0MS1mMjQwYTljMGZhODIiLCAgImxldmVscyI6IFsgeyAiZGVzYyI6ICJUaGUgYmFsYW5jZSBpcyBoaWdoZXIgdGhhbiAxIFNVSSIsICJsZXZlbCI6IDEgfSwgeyAiZGVzYyI6ICJDcmVhdGVkIGF0IGxlYXN0IDkwIGRheXMgYWdvIGFuZCB0aGUgYmFsYW5jZSBpcyBoaWdoZXIgdGhhbiA1IFNVSSIsICJsZXZlbCI6IDIgfSwgeyAiZGVzYyI6ICJDcmVhdGVkIGF0IGxlYXN0IDM2NSBkYXlzIGFnbyBhbmQgdGhlIGJhbGFuY2UgaXMgaGlnaGVyIHRoYW4gMTAgU1VJIiwgImxldmVsIjogMyB9IF0gfQo="]' \
+		'[]' \
+		'[]' \
+		'[]' \
+		--gas-budget 100000000

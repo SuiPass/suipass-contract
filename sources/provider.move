@@ -1,6 +1,7 @@
 module suipass::provider {
     use std::vector;
     use std::string::{Self, String};
+    use std::option::{Self, Option};
 
     use sui::object::{Self, UID, ID};
     use sui::transfer;
@@ -42,6 +43,7 @@ module suipass::provider {
 
         max_level: u16,
         max_score: u16,
+        disable: bool,
 
         requests: VecMap<address, Request>,
         records: VecMap<address, Record>,
@@ -135,6 +137,7 @@ module suipass::provider {
             balance: balance::zero(),
             max_level,
             max_score,
+            disable: false,
             requests: vec_map::empty(),
             records: vec_map::empty(),
         };
@@ -146,6 +149,27 @@ module suipass::provider {
         score: u16,
     ) {
         provider.max_score = score
+    }
+
+    public(friend) fun update_info(
+        provider: &mut Provider,
+        metadata: Option<vector<u8>>,
+        submit_fee: Option<u64>,
+        update_fee: Option<u64>,
+        max_level: Option<u16>,
+    ) {
+        if (option::is_some(&metadata)) {
+            provider.metadata = string::utf8(option::extract(&mut metadata));
+        };
+        if (option::is_some(&submit_fee)) {
+            provider.submit_fee = option::extract(&mut submit_fee);
+        };
+        if (option::is_some(&update_fee)) {
+            provider.update_fee = option::extract(&mut update_fee);
+        };
+        if (option::is_some(&max_level)) {
+            provider.max_level = option::extract(&mut max_level);
+        };
     }
 
     public(friend) fun submit_request(
