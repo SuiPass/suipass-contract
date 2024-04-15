@@ -31,7 +31,7 @@
     "name": "Twitter",
     "metadata": {
       "desc": "Connect to X to verify your social media presence.",
-      "logoUrl": "https://firebasestorage.googleapis.com/v0/b/suipass.appspot.com/o/x-logo.svg?alt=media&token=684cfde6-faee-4764-b4e6-43427f6f1404",
+      "logoUrl": "https://firebasestorage.googleapis.com/v0/b/suipass.appspot.com/o/x-logo.svg?alt=media&token=469970e6-d12c-4ff1-8d91-68943d7b8a9d",
       "levels": [
         {
           "desc": "Created at least 90 days ago",
@@ -62,7 +62,7 @@
     "name": "Google",
     "metadata": {
       "desc": "Connect your existing Google account to verify.",
-      "logoUrl": "https://firebasestorage.googleapis.com/v0/b/suipass.appspot.com/o/google-logo.svg?alt=media&token=e9697c2a-0497-4ac7-9df8-af102aab6238",
+      "logoUrl": "https://firebasestorage.googleapis.com/v0/b/suipass.appspot.com/o/google_logo.svg?alt=media&token=ec7770ed-47ce-4877-9c92-efdc45e69eda",
       "levels": [
         {
           "desc": "Created at least 90 days ago",
@@ -97,7 +97,7 @@
     "name": "Sui",
     "metadata": {
       "desc": "Verify SUI activity.",
-      "logoUrl": "https://firebasestorage.googleapis.com/v0/b/suipass.appspot.com/o/sui-logo.svg?alt=media&token=29ad950f-70dd-4d96-a041-f240a9c0fa82",
+      "logoUrl": "https://firebasestorage.googleapis.com/v0/b/suipass.appspot.com/o/sui-logo.svg?alt=media&token=21a37f0c-7500-45e9-8df5-08f222163f01",
       "levels": [
         {
           "desc": "The balance is higher than 1 SUI",
