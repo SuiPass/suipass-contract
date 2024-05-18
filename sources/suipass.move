@@ -13,6 +13,8 @@ module suipass::suipass {
     use suipass::provider::{Self, Provider, ProviderCap};
     use suipass::user::{Self, User};
 
+    friend suipass::enterprise;
+
     // This module sumarizes all supported credits,
     // allows users to mint their passport NFT (Need to check if NFT can be updated, OR users will hold a lot of passports since their credit can be expire)
     const DEFAULT_THRESHOLD: u16 = 30; // 30/100
@@ -262,7 +264,7 @@ module suipass::suipass {
     //======================================================================
     // Validation functions - Add your validation functions here (if any)
     //======================================================================
-    fun assert_provider_exist(suipass: &SuiPass, provider_id: ID) {
+    public fun assert_provider_exist(suipass: &SuiPass, provider_id: ID) {
         assert!(vec_map::contains(&suipass.providers, &provider_id), EProviderNotExist);
     }
 

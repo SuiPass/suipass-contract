@@ -31,7 +31,7 @@
     "name": "Twitter",
     "metadata": {
       "desc": "Connect to X to verify your social media presence.",
-      "logoUrl": "https://firebasestorage.googleapis.com/v0/b/suipass.appspot.com/o/x-logo.svg?alt=media&token=469970e6-d12c-4ff1-8d91-68943d7b8a9d",
+      "logoUrl": "https: //firebasestorage.googleapis.com/v0/b/suipass.appspot.com/o/x-logo.svg?alt=media&token=469970e6-d12c-4ff1-8d91-68943d7b8a9d",
       "levels": [
         {
           "desc": "Created at least 90 days ago",
