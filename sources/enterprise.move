@@ -64,6 +64,7 @@ module suipass::enterprise {
         name: vector<u8>,
         metadata: vector<u8>,
         provider_ids: vector<ID>,
+        threshold: u16,
         ctx: &mut TxContext
     ) {
         let providers = vec_map::empty();
@@ -93,7 +94,7 @@ module suipass::enterprise {
             name: string::utf8(name),
             metadata: string::utf8(metadata),
             providers,
-            threshold: DEFAULT_THRESHOLD,
+            threshold,
         });
 
         transfer::transfer(cap, tx_context::sender(ctx));
