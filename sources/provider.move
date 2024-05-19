@@ -93,6 +93,10 @@ module suipass::provider {
         cap.provider
     }
 
+    public fun name(provider: &Provider): String {
+        provider.name
+    }
+
     public fun max_score(provider: &Provider): u16 {
         provider.max_score
     }

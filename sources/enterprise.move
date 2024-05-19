@@ -58,19 +58,17 @@ module suipass::enterprise {
     //======================================================================
 
     public fun create_enterprise(
-        _: &AdminCap,
-        suipass: &mut SuiPass, 
+        suipass: &mut SuiPass,
         owner: address,
         name: vector<u8>,
         metadata: vector<u8>,
         provider_ids: vector<ID>,
-        threshold: u16,
+        threshold: u16, // TODO: Handle check if it valid
         ctx: &mut TxContext
     ) {
         let providers = vec_map::empty();
         let i = 0;
         while (i < vector::length(&provider_ids)) {
-            // TODO: assert provider exists
             let id = *vector::borrow(&provider_ids, i);
             suipass::assert_provider_exist(suipass, id);
             vec_map::insert(&mut providers, id, ProviderConfig {});
@@ -99,6 +97,37 @@ module suipass::enterprise {
 
         transfer::transfer(cap, tx_context::sender(ctx));
         event::emit(event);
+    }
+
+    //======================================================================
+    // Accessors
+    //======================================================================
+
+    public fun calculate_user_score(ent: &Enterprise, suipass: &SuiPass, user: &User, _: &mut TxContext): u16 {
+        let levels = user::levels(user);
+        let ids = vec_map::keys(&levels);
+        let len = vector::length(&ids);
+
+        let result: u16 = 0;
+        loop {
+            if (len == 0) break;
+            len = len - 1;
+
+            let id = vector::borrow(&ids, len);
+
+            let level = *vec_map::get(&levels, id);
+
+            let increase = suipass::get_score(suipass, id, level);
+
+            result = result + increase;
+        };
+
+        result
+    }
+
+    public fun is_human(ent: &Enterprise, suipass: &SuiPass, user: &User, ctx: &mut TxContext): bool {
+        let score = calculate_user_score(ent, suipass, user, ctx);
+        score >= ent.threshold
     }
 
     //======================================================================
