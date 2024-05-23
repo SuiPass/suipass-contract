@@ -4,7 +4,7 @@
     "name": "Github",
     "metadata": {
       "desc": "Connect to Github to verify your code contributions.",
-      "logoUrl": "https://firebasestorage.googleapis.com/v0/b/suipass.appspot.com/o/github-logo.svg?alt=media&token=dab461ae-6eb0-42fc-a41e-5c65de6f948c",
+      "logoUrl": "https://ipfs-ops-api.rep.run/ipfs/Qmcc9K4aDWjCs77N7QwUBzRGct3DYBMUC385JF5Mf1MAGU",
       "levels": [
         {
           "desc": "Created at least 90 days ago",
@@ -31,7 +31,7 @@
     "name": "Twitter",
     "metadata": {
       "desc": "Connect to X to verify your social media presence.",
-      "logoUrl": "https: //firebasestorage.googleapis.com/v0/b/suipass.appspot.com/o/x-logo.svg?alt=media&token=469970e6-d12c-4ff1-8d91-68943d7b8a9d",
+      "logoUrl": "https://ipfs-ops-api.rep.run/ipfs/QmYtjeEw6Np9hyrwL9G2PvMa4YYjRdaqmzUMm44NCzjZ67",
       "levels": [
         {
           "desc": "Created at least 90 days ago",
@@ -62,7 +62,7 @@
     "name": "Google",
     "metadata": {
       "desc": "Connect your existing Google account to verify.",
-      "logoUrl": "https://firebasestorage.googleapis.com/v0/b/suipass.appspot.com/o/google_logo.svg?alt=media&token=ec7770ed-47ce-4877-9c92-efdc45e69eda",
+      "logoUrl": "https://ipfs-ops-api.rep.run/ipfs/QmXEUZ87VYEWrsNENhG7Ncdz7Kmui9dXUVu9eyp56x8nAJ",
       "levels": [
         {
           "desc": "Created at least 90 days ago",
@@ -97,7 +97,7 @@
     "name": "Sui",
     "metadata": {
       "desc": "Verify SUI activity.",
-      "logoUrl": "https://firebasestorage.googleapis.com/v0/b/suipass.appspot.com/o/sui-logo.svg?alt=media&token=21a37f0c-7500-45e9-8df5-08f222163f01",
+      "logoUrl": "https://ipfs-ops-api.rep.run/ipfs/QmZmsPJQ64WXqSVRxfwAzEEKDeW4GLohAq6rkB1ypeDFLd",
       "levels": [
         {
           "desc": "The balance is higher than 1 SUI",
@@ -124,26 +124,18 @@
     "name": "Verisoul",
     "metadata": {
       "desc": "Connect to Verisoul to verify your liveness KYC.",
-      "logoUrl": "https://firebasestorage.googleapis.com/v0/b/suipass.appspot.com/o/github-logo.svg?alt=media&token=dab461ae-6eb0-42fc-a41e-5c65de6f948c",
+      "logoUrl": "https://ipfs-ops-api.rep.run/ipfs/QmXihZDxgeh6mA3sZz1v1WLah5jkKBAKq3MAhmXfnN5XNA",
       "levels": [
         {
-          "desc": "Created at least 90 days ago",
+          "desc": "KYC your face",
           "level": 1
-        },
-        {
-          "desc": "Created at least 180 days ago",
-          "level": 2
-        },
-        {
-          "desc": "Created at least 365 days ago",
-          "level": 3
         }
       ]
     },
-    "submitFee": 99,
-    "updateFee": 49,
-    "totalLevels": 3,
-    "score": 270,
+    "submitFee": 10000,
+    "updateFee": 10000,
+    "totalLevels": 1,
+    "score": 350,
     "owner": "0xed6f09f1f6bdc991edc10d3c82418aefc53cf6824ca23a44df4caea48a70b182"
   }
 ]
