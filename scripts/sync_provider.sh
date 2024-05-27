@@ -25,7 +25,7 @@ cat scripts/provider.json | jq -c '.[]' | while read -r provider; do
 		'["'${metadata}'"]' \
 		'['${submitFee}']' \
 		'['${updateFee}']' \
-		'['${score}']' \
+		'['${totalLevels}']' \
 		--gas-budget 100000000
 
 	# sui client call \
