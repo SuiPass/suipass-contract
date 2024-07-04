@@ -89,10 +89,11 @@ module suipass::suipass {
     //======================================================================
 
     fun init(ctx: &mut TxContext) {
+        //Tạo ra AdminCap và transfer nó cho người gọi
         transfer::transfer(AdminCap {
             id: object::new(ctx),
         }, tx_context::sender(ctx));
-
+        //Tạo một shared object SuiPass
         transfer::share_object(SuiPass {
             id: object::new(ctx),
             providers: vec_map::empty(),
@@ -110,10 +111,11 @@ module suipass::suipass {
         submit_fee: u64,
         update_fee: u64,
         total_levels: u16,
+        level_score_distribution: VecMap<u16, u16>,
         score: u16,
         ctx: &mut TxContext
     ) {
-        let (provider_cap, provider) = provider::create_provider(name, metadata, submit_fee, update_fee, total_levels, score, ctx);
+        let (provider_cap, provider) = provider::create_provider(name, metadata, submit_fee, update_fee, total_levels, level_score_distribution, score, ctx);
 
         let provider_id = provider::id(&provider);
         let event = ProviderAdded {
@@ -148,6 +150,19 @@ module suipass::suipass {
     //     vec_map::get_mut(&mut suipass.providers, &id);
     //     // table::remove(&mut suipass.providers_data, provider);
     // }
+
+    public fun update_provider_score_distribution(
+        _: &AdminCap,
+        suipass: &mut SuiPass,
+        provider_id: ID,
+        score_distribution: VecMap<u16, u16>,
+        _: &mut TxContext
+    ){
+        assert_provider_exist(suipass, provider_id);
+
+        let provider = vec_map::get_mut(&mut suipass.providers, &provider_id);
+        provider::update_score_distribution(provider, score_distribution);
+    }
 
     public fun update_provider_score(
         _: &AdminCap,
@@ -225,8 +240,15 @@ module suipass::suipass {
         assert_provider_exist(suipass, *provider_id);
         let provider = vec_map::get(&suipass.providers, provider_id);
         let max_score = provider::max_score(provider);
-        let total_levels = provider::max_level(provider);
-        (level / total_levels * max_score)
+        let score_distribution = provider::level_score_distribution(provider);
+        let score = 0;
+        //TODO check if level is valid
+        while (level > 0) {
+            score = score + (*vec_map::get(&score_distribution, &level) / 100) * max_score;
+            level = level - 1;
+        };
+
+        score
     }
 
     public fun calculate_user_score(suipass: &SuiPass, user: &User, _: &mut TxContext): u16 {
@@ -243,13 +265,7 @@ module suipass::suipass {
 
             let level = *vec_map::get(&levels, id);
 
-            let provider = vec_map::get(&suipass.providers, id);
-            let max_score = provider::max_score(provider);
-            let total_levels = provider::max_level(provider);
-
-            let increase = (level / total_levels * max_score);
-
-            result = result + increase;
+            result = result + get_score(suipass, id, level);
         };
 
         result

@@ -22,6 +22,7 @@ module suipass::provider {
     const EInsufficientPayment: u64 = 1;
     const ERequestRejected: u64 = 2;
     const EInvalidRequest: u64 = 3;
+    const EInvalidScoreDistribution: u64 = 4;
 
     //======================================================================
     // Module Structs
@@ -42,6 +43,7 @@ module suipass::provider {
         balance: Balance<SUI>,
 
         max_level: u16,
+        level_score_distribution: VecMap<u16, u16>,
         max_score: u16,
         disable: bool,
 
@@ -77,6 +79,22 @@ module suipass::provider {
         coin::put(&mut provider.balance, coin)
     }
 
+    public fun check_level_score_distribution(distribution: VecMap<u16, u16>, max_level: u16){
+        let total_percent: u16 = 0;
+        let count = 1;
+        let pre_level_percent = 0;
+        while (count <= max_level) {
+            //TODO check if the distribution lengh is out of max_level
+            assert!(vec_map::contains(&distribution, &count), EInvalidScoreDistribution);
+            let percent = *vec_map::get(&distribution, &count);
+            assert!(percent > pre_level_percent, EInvalidScoreDistribution);
+            total_percent = total_percent + percent;
+            count = count + 1;
+        };
+
+        assert!(total_percent == 100, EInvalidScoreDistribution);
+    }
+
     //======================================================================
     // Accessors
     //======================================================================
@@ -105,6 +123,10 @@ module suipass::provider {
         provider.max_level
     }
 
+    public fun level_score_distribution(provider: &Provider): VecMap<u16, u16> {
+        provider.level_score_distribution
+    }
+
     public fun submit_fee(provider: &Provider): u64 {
         provider.submit_fee
     }
@@ -123,9 +145,11 @@ module suipass::provider {
         submit_fee: u64,
         update_fee: u64,
         max_level: u16,
+        level_score_distribution: VecMap<u16, u16>,
         max_score: u16,
         ctx: &mut TxContext
     ): (ProviderCap, Provider) {
+        check_level_score_distribution(level_score_distribution, max_level);
         let uid = object::new(ctx);
         let id = object::uid_to_inner(&uid);
         let cap = ProviderCap {
@@ -140,6 +164,7 @@ module suipass::provider {
             update_fee,
             balance: balance::zero(),
             max_level,
+            level_score_distribution,
             max_score,
             disable: false,
             requests: vec_map::empty(),
@@ -153,6 +178,14 @@ module suipass::provider {
         score: u16,
     ) {
         provider.max_score = score
+    }
+
+    public(friend) fun update_score_distribution(
+        provider: &mut Provider,
+        distribution: VecMap<u16, u16>,
+    ){
+        check_level_score_distribution(distribution, provider.max_level);
+        provider.level_score_distribution = distribution;
     }
 
     public(friend) fun update_info(
@@ -213,17 +246,20 @@ module suipass::provider {
         ctx: &mut TxContext
     ): Request {
         // HACK: Trick the request id
+        //Từ id của người request lấy ra key
         let request_id = &address::from_bytes(hash::blake2b256(&address::to_bytes(*requester)));
 
+        //Kiểm tra xem người gọi hàm có phải là chủ sở hữu của provider không
         assert!(provider_cap.provider == object::uid_to_inner(&provider.id), ENotProviderOwner);
         assert!(vec_map::contains(&provider.requests, request_id), EInvalidRequest);
         assert!(vector::length(&evidence) > 0, ERequestRejected);
-
+        //xoá request khỏi provider
         let (_, request) = vec_map::remove(&mut provider.requests, request_id);
-    
+        //Lấy thời gian hiện tại
         let issued_date = tx_context::epoch_timestamp_ms(ctx);
+        //Tạo một record lưu thông tin được resolve
         let record = Record { requester: *requester, level, evidence: string::utf8(evidence), issued_date };
-
+        //Nếu requester đã có record thì cập nhật record cũ, ngược lại thì thêm record mới
         if (vec_map::contains(&provider.records, &request.requester)) {
             let cur = vec_map::get_mut(&mut provider.records, &request.requester);
             *cur = record;
@@ -231,8 +267,9 @@ module suipass::provider {
             vec_map::insert(&mut provider.records, request.requester, record);
         };
 
-
+        //Call đến hàm new của package approval để tạo một approval mới
         let approval = approval::new(id(provider), level, evidence, issued_date, ctx);
+        //Chuyển approval đến cho requester
         transfer::public_transfer(approval, request.requester);
         request
     }
@@ -249,7 +286,7 @@ module suipass::provider {
         assert!(vec_map::contains(&provider.requests, request_id), EInvalidRequest);
 
         let (_, request) = vec_map::remove(&mut provider.requests, request_id);
-    
+
         request
     }
 }
