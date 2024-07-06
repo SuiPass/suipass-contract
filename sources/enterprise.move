@@ -33,12 +33,12 @@ module suipass::enterprise {
     // Module Structs
     //======================================================================
 
-    struct EnterpriseCap has key {
+    public struct EnterpriseCap has key {
         id: UID,
         enterprise: ID
     }
     // This struct store supported providers and others config
-    struct Enterprise has key, store {
+    public struct Enterprise has key, store {
         id: UID,
         name: String,
         metadata: String,
@@ -47,13 +47,13 @@ module suipass::enterprise {
         threshold: u16,
     }
 
-    struct ProviderConfig has store { }
+    public struct ProviderConfig has store { }
 
     //======================================================================
     // Event Structs
     //======================================================================
 
-    struct CreatedEnterprise has copy, drop {
+    public struct CreatedEnterprise has copy, drop {
         enterprise_id: ID,
         enterprise_cap_id: ID,
     }
@@ -73,8 +73,8 @@ module suipass::enterprise {
         ctx: &mut TxContext
     ) {
         let weights = convert_provider_weights(weights_vec, provider_ids);
-        let providers = vec_map::empty();
-        let i = 0;
+        let mut providers = vec_map::empty();
+        let mut i = 0;
         while (i < vector::length(&provider_ids)) {
             let id = *vector::borrow(&provider_ids, i);
             suipass::assert_provider_exist(suipass, id);
@@ -112,9 +112,9 @@ module suipass::enterprise {
     public fun calculate_user_score(ent: &Enterprise, suipass: &SuiPass, user: &User, _: &mut TxContext): u16 {
         let levels = user::levels(user);
         let ids = vec_map::keys(&levels);
-        let len = vector::length(&ids);
+        let mut len = vector::length(&ids);
 
-        let result: u16 = 0;
+        let mut result: u16 = 0;
         loop {
             if (len == 0) break;
             len = len - 1;
@@ -140,9 +140,9 @@ module suipass::enterprise {
 
     fun convert_provider_weights(weight_vec: vector<u16>, provider_ids: vector<ID>): VecMap<ID, u16>{
         assert!(vector::length(&provider_ids) == vector::length(&weight_vec), EInvalidProviderWeights);
-        let len = vector::length(&weight_vec);
-        let sum = 0;
-        let weights: VecMap<ID, u16> = vec_map::empty();
+        let mut len = vector::length(&weight_vec);
+        let mut sum = 0;
+        let mut weights: VecMap<ID, u16> = vec_map::empty();
         while (len >= 0) {
             let weight = *vector::borrow(&weight_vec, len);
             sum = sum + weight;

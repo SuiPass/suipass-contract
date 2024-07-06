@@ -14,7 +14,7 @@ module suipass::suipass {
     use suipass::provider::{Self, Provider, ProviderCap};
     use suipass::user::{Self, User};
 
-    friend suipass::enterprise;
+    // friend suipass::enterprise;
 
     // This module sumarizes all supported credits,
     // allows users to mint their passport NFT (Need to check if NFT can be updated, OR users will hold a lot of passports since their credit can be expire)
@@ -31,7 +31,7 @@ module suipass::suipass {
     //======================================================================
 
     // This struct store supported providers and others config
-    struct SuiPass has key, store {
+    public struct SuiPass has key, store {
         id: UID,
         providers: VecMap<ID, Provider>,
         threshold: u16,
@@ -42,7 +42,7 @@ module suipass::suipass {
 
     // We assume that the threshold will be changed in the future, but it doesn't matter. 
     // The NFT is still legal since it doesn't expire
-    struct NFTPassportMetadata has key, store {
+    public struct NFTPassportMetadata has key, store {
         id: UID,
         // name: string::String,
         // description: string::String,
@@ -53,7 +53,7 @@ module suipass::suipass {
         threshold: u16
     }
 
-    struct AdminCap has key {
+    public struct AdminCap has key {
         id: UID,
     }
 
@@ -66,19 +66,19 @@ module suipass::suipass {
         @param provider_id - The id of the provider object.
         @param provider_cap_id - The id of the provider capability object.
     */
-    struct ProviderAdded has copy, drop {
+    public struct ProviderAdded has copy, drop {
         provider_id: ID,
         provider_name: String,
         provider_cap_id: ID,
     }
 
-    struct RequestSubmitted has copy, drop {
+    public struct RequestSubmitted has copy, drop {
         provider_id: ID,
         requester: address,
         request_id: address
     }
 
-    struct RequestResolved has copy, drop {
+    public struct RequestResolved has copy, drop {
         provider_id: ID,
         requester: address,
         request_id: address
@@ -89,11 +89,10 @@ module suipass::suipass {
     //======================================================================
 
     fun init(ctx: &mut TxContext) {
-        //Tạo ra AdminCap và transfer nó cho người gọi
         transfer::transfer(AdminCap {
             id: object::new(ctx),
         }, tx_context::sender(ctx));
-        //Tạo một shared object SuiPass
+
         transfer::share_object(SuiPass {
             id: object::new(ctx),
             providers: vec_map::empty(),
@@ -111,7 +110,7 @@ module suipass::suipass {
         submit_fee: u64,
         update_fee: u64,
         total_levels: u16,
-        level_score_distribution: VecMap<u16, u16>,
+        level_score_distribution: vector<u16>,
         score: u16,
         ctx: &mut TxContext
     ) {
@@ -133,10 +132,10 @@ module suipass::suipass {
     public fun update_provider(
         provider_cap: &ProviderCap,
         suipass: &mut SuiPass, 
-        metadata: Option<vector<u8>>,
-        submit_fee: Option<u64>,
-        update_fee: Option<u64>,
-        total_levels: Option<u16>,
+        metadata: &mut Option<vector<u8>>,
+        submit_fee: &mut Option<u64>,
+        update_fee: &mut Option<u64>,
+        total_levels: &mut Option<u16>,
     ) {
         assert_provider_exist(suipass, provider::id_from_cap(provider_cap));
         let provider = vec_map::get_mut(&mut suipass.providers, &provider::id_from_cap(provider_cap)); 
@@ -155,7 +154,7 @@ module suipass::suipass {
         _: &AdminCap,
         suipass: &mut SuiPass,
         provider_id: ID,
-        score_distribution: VecMap<u16, u16>,
+        score_distribution: vector<u16>,
         _: &mut TxContext
     ){
         assert_provider_exist(suipass, provider_id);
@@ -241,10 +240,11 @@ module suipass::suipass {
         let provider = vec_map::get(&suipass.providers, provider_id);
         let max_score = provider::max_score(provider);
         let score_distribution = provider::level_score_distribution(provider);
-        let score = 0;
-        //TODO check if level is valid
+        let mut score = 0;
+        // //TODO check if level is valid
+        let mut level = level;
         while (level > 0) {
-            score = score + (*vec_map::get(&score_distribution, &level) / 100) * max_score;
+            score = score + (*vec_map::get(&score_distribution, &level) * max_score / 100);
             level = level - 1;
         };
 
@@ -254,9 +254,9 @@ module suipass::suipass {
     public fun calculate_user_score(suipass: &SuiPass, user: &User, _: &mut TxContext): u16 {
         let levels = user::levels(user);
         let ids = vec_map::keys(&levels);
-        let len = vector::length(&ids);
+        let mut len = vector::length(&ids);
 
-        let result: u16 = 0;
+        let mut result: u16 = 0;
         loop {
             if (len == 0) break;
             len = len - 1;
@@ -303,4 +303,13 @@ module suipass::suipass {
     //======================================================================
     // Tests
     //======================================================================
+    #[test_only]
+    public fun init_for_testing(ctx: &mut TxContext){
+        init(ctx);
+    }
+
+    #[test_only]
+    public fun get_provider_by_id(suipass: &SuiPass, provider_id: &ID): &Provider {
+        vec_map::get(&suipass.providers, provider_id)
+    }
 }

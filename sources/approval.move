@@ -3,15 +3,13 @@ module suipass::approval {
     use sui::object::{Self, UID, ID};
     use sui::tx_context::{TxContext};
 
-    friend suipass::provider;
-
     // Errors
 
     //======================================================================
     // Module Structs
     //======================================================================
 
-    struct Approval has key, store {
+    public struct Approval has key, store {
         id: UID,
         provider: ID,
         level: u16,
@@ -25,7 +23,7 @@ module suipass::approval {
     //======================================================================
 
     // only suipass owner can create a provider
-    public(friend) fun new(
+    public(package) fun new(
         provider:ID,
         level: u16,
         evidence: vector<u8>,
