@@ -17,7 +17,7 @@ module suipass::user_test {
         {
             new(b"name: test", test_scenario::ctx(&mut scenario));
         };
-        let tx = test_scenario::next_tx(&mut scenario, shop_owner);
+        test_scenario::next_tx(&mut scenario, shop_owner);
 
         {
             let user = test_scenario::take_from_sender<User>(&scenario);
@@ -26,6 +26,6 @@ module suipass::user_test {
 
             test_scenario::return_to_sender(&scenario, user);
         };
-        let tx = test_scenario::end(scenario);
+        test_scenario::end(scenario);
     }
 }

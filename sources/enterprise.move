@@ -27,7 +27,7 @@ module suipass::enterprise {
     const EInvalidProviderWeights: u64 = 3;
 
     //Const value
-    const MAX_WEIGHT: u16 = 1000;
+    const MAX_WEIGHT: u16 = 10000;
 
     //======================================================================
     // Module Structs
@@ -114,7 +114,7 @@ module suipass::enterprise {
         let ids = vec_map::keys(&levels);
         let mut len = vector::length(&ids);
 
-        let mut result: u16 = 0;
+        let mut result: u64 = 0;
         loop {
             if (len == 0) break;
             len = len - 1;
@@ -123,14 +123,13 @@ module suipass::enterprise {
 
             let level = *vec_map::get(&levels, id);
 
-            let increase = suipass::get_score(suipass, id, level);
+            let increase = (suipass::get_score(suipass, id, level) as u64);
 
-            let weight = *vec_map::get(&ent.weights, id);
-
-            result = result + increase * weight / MAX_WEIGHT;
+            let weight = (*vec_map::get(&ent.weights, id) as u64);
+            result = result + increase * weight / (MAX_WEIGHT as u64);
         };
 
-        result
+        result as u16
     }
 
     public fun is_human(ent: &Enterprise, suipass: &SuiPass, user: &User, ctx: &mut TxContext): bool {
@@ -143,12 +142,12 @@ module suipass::enterprise {
         let mut len = vector::length(&weight_vec);
         let mut sum = 0;
         let mut weights: VecMap<ID, u16> = vec_map::empty();
-        while (len >= 0) {
+        while (len > 0) {
+            len = len - 1;
             let weight = *vector::borrow(&weight_vec, len);
             sum = sum + weight;
             let provider = *vector::borrow(&provider_ids, len);
             vec_map::insert(&mut weights, provider, weight);
-            len = len + 1;
         };
         assert!(sum == MAX_WEIGHT, EInvalidProviderWeights);
 
