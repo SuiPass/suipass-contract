@@ -107,10 +107,9 @@ module suipass::suipass {
         update_fee: u64,
         total_levels: u16,
         level_score_distribution: vector<u16>,
-        score: u16,
         ctx: &mut TxContext
     ) {
-        let (provider_cap, provider) = provider::create_provider(name, metadata, submit_fee, update_fee, total_levels, level_score_distribution, score, ctx);
+        let (provider_cap, provider) = provider::create_provider(name, metadata, submit_fee, update_fee, total_levels, level_score_distribution, ctx);
 
         let provider_id = provider::id(&provider);
         let event = ProviderAdded {
@@ -240,11 +239,11 @@ module suipass::suipass {
         // //TODO check if level is valid
         let mut level = level;
         while (level > 0) {
-            score = score + (*vec_map::get(&score_distribution, &level) * max_score / 100);
+            score = score + ((*vec_map::get(&score_distribution, &level) as u32) * (max_score as u32) / 100);
             level = level - 1;
         };
 
-        score
+        score as u16
     }
 
     public fun calculate_user_score(suipass: &SuiPass, user: &User, _: &mut TxContext): u16 {

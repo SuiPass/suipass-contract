@@ -13,7 +13,6 @@ module suipass::provider_test {
         provider_creator: address, 
         total_levels: u16, 
         level_score_distribution: vector<u16>,
-        max_score: u16
     ){
         //scenario must begin with admin address
         next_tx(scenario, admin);
@@ -30,7 +29,6 @@ module suipass::provider_test {
                 0,
                 total_levels,
                 level_score_distribution,
-                max_score,
                 ctx(scenario)
             );
             test::return_to_sender(scenario, admin_cap);
@@ -70,11 +68,10 @@ module suipass::provider_test {
         let provider_id: ID;
         let total_level = 2;
         let level_score_distribution = vector[50, 50];
-        let max_score = 400;
         {
             suipass::init_for_testing(ctx(&mut scenario));
         };
-        creat_provider(&mut scenario, admin, provider, total_level, level_score_distribution, max_score);
+        creat_provider(&mut scenario, admin, provider, total_level, level_score_distribution);
 
         next_tx(&mut scenario, provider);
         let provider_cap = test::take_from_sender<ProviderCap>(&scenario);
@@ -103,7 +100,7 @@ module suipass::provider_test {
             let suipass_obj = test::take_shared<SuiPass>(&scenario);
             let level = 1;
             let score = get_score(&suipass_obj, &provider_id,level);
-            assert!(score == 200);
+            assert!(score == 5000);
             test::return_shared(suipass_obj);
             test::return_to_sender(&scenario, provider_cap);
         };

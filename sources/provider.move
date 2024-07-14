@@ -17,6 +17,9 @@ module suipass::provider {
     const EInvalidRequest: u64 = 3;
     const EInvalidScoreDistribution: u64 = 4;
 
+    //Constants
+    const MAX_SCORE: u16 = 10000;
+
     //======================================================================
     // Module Structs
     //======================================================================
@@ -150,7 +153,6 @@ module suipass::provider {
         update_fee: u64,
         max_level: u16,
         level_score_distribution: vector<u16>,
-        max_score: u16,
         ctx: &mut TxContext
     ): (ProviderCap, Provider) {
         let mut distribution = table::new(ctx);
@@ -170,7 +172,7 @@ module suipass::provider {
             balance: balance::zero(),
             max_level,
             level_score_distribution: distribution,
-            max_score,
+            max_score: MAX_SCORE,
             disable: false,
             requests: table::new(ctx),
             records: table::new(ctx),

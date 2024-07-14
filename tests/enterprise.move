@@ -59,8 +59,7 @@ module suipass::enterprise_test{
         {
             let total_level = 2;
             let level_score_distribution = vector[50, 50];
-            let max_score = 400;
-            creat_provider(&mut scenario, admin, provider_0, total_level, level_score_distribution, max_score);
+            creat_provider(&mut scenario, admin, provider_0, total_level, level_score_distribution);
         };
         next_tx(&mut scenario, provider_0);
         {
@@ -73,8 +72,7 @@ module suipass::enterprise_test{
         {
             let total_level = 3;
             let level_score_distribution = vector[10,40,50];
-            let max_score = 500;
-            creat_provider(&mut scenario, admin, provider_1, total_level, level_score_distribution, max_score);
+            creat_provider(&mut scenario, admin, provider_1, total_level, level_score_distribution);
         };
         next_tx(&mut scenario, provider_1);
         {
@@ -87,8 +85,7 @@ module suipass::enterprise_test{
         {
             let total_level = 4;
             let level_score_distribution = vector[10,20,30,40];
-            let max_score = 600;
-            creat_provider(&mut scenario, admin, provider_2, total_level, level_score_distribution, max_score);
+            creat_provider(&mut scenario, admin, provider_2, total_level, level_score_distribution);
         };
         next_tx(&mut scenario, provider_2);
         {
@@ -175,7 +172,7 @@ module suipass::enterprise_test{
             let user = test::take_from_sender<User>(&scenario);
             let enterprise = test::take_shared<Enterprise>(&scenario);
             let score = calculate_user_score(&enterprise, &suipass_object, &user, ctx(&mut scenario));
-            assert!(score == 306);
+            assert!(score == 5600);
             test::return_shared(suipass_object);
             test::return_to_sender(&scenario, user);
             test::return_shared(enterprise);
