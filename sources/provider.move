@@ -1,11 +1,7 @@
 module suipass::provider {
-    use std::vector;
     use std::string::{Self, String};
-    use std::option::{Self, Option};
+    use sui::table::{Self, Table};
 
-    use sui::object::{Self, UID, ID};
-    use sui::transfer;
-    use sui::tx_context::{Self, TxContext};
     use sui::sui::SUI;
     use sui::balance::{Self, Balance};
     use sui::coin;
@@ -14,14 +10,6 @@ module suipass::provider {
     use sui::hash;
 
     use suipass::approval;
-
-    #[test_only]
-    use sui::test_scenario;
-    #[test_only]
-    use sui::test_utils::assert_eq;
-
-    // friend suipass::suipass;
-
     // Errors
     const ENotProviderOwner: u64 = 0;
     const EInsufficientPayment: u64 = 1;
@@ -48,12 +36,12 @@ module suipass::provider {
         balance: Balance<SUI>,
 
         max_level: u16,
-        level_score_distribution: VecMap<u16, u16>,
+        level_score_distribution: Table<u16, u16>,
         max_score: u16,
         disable: bool,
 
-        requests: VecMap<address, Request>,
-        records: VecMap<address, Record>,
+        requests: Table<address, Request>,
+        records: Table<address, Record>,
     }
 
     public struct Request has store, drop, copy {
@@ -84,8 +72,7 @@ module suipass::provider {
         coin::put(&mut provider.balance, coin)
     }
 
-    fun get_level_score_distribution(distribution_vec: vector<u16>, max_level: u16): VecMap<u16, u16> {
-        let mut distribution = vec_map::empty();
+    fun set_level_score_distribution(distribution_vec: vector<u16>, max_level: u16, result: &mut Table<u16, u16>): &mut Table<u16, u16> {
         let mut total_percent: u16 = 0;
         let mut count = 0;
         let pre_level_percent = 0;
@@ -94,25 +81,11 @@ module suipass::provider {
             let percent = *vector::borrow(&distribution_vec, (count as u64));
             assert!(percent > pre_level_percent, EInvalidScoreDistribution);
             total_percent = total_percent + percent;
-            vec_map::insert(&mut distribution, count + 1, percent);
+            table::add(result, count + 1, percent);
             count = count + 1;
         };
 
         assert!(total_percent == 100, EInvalidScoreDistribution);
-
-        distribution
-    }
-
-    fun get_requests(provider: &Provider): VecMap<address, Request>{
-        let mut result: VecMap<address, Request> = vec_map::empty();
-        let mut keys = provider.requests.keys();
-        let mut length = vector::length(&keys);
-        while (length > 0) {
-            let key = vector::pop_back(&mut keys);
-            let request = vec_map::get(&provider.requests, &key);
-            vec_map::insert(&mut result, copy key, *request);
-            length = length - 1;
-        };
 
         result
     }
@@ -146,7 +119,16 @@ module suipass::provider {
     }
 
     public fun level_score_distribution(provider: &Provider): VecMap<u16, u16> {
-        provider.level_score_distribution
+        let length = table::length(&provider.level_score_distribution);
+        let mut i = 1;
+        let mut result = vec_map::empty();    
+        while (i <= length) {
+            let key = i as u16;
+            let value = table::borrow(&provider.level_score_distribution, i as u16);
+            result.insert(key, *value);
+            i = i + 1;
+        };
+        result
     }
 
     public fun submit_fee(provider: &Provider): u64 {
@@ -171,7 +153,8 @@ module suipass::provider {
         max_score: u16,
         ctx: &mut TxContext
     ): (ProviderCap, Provider) {
-        let distribution = get_level_score_distribution(level_score_distribution, max_level);
+        let mut distribution = table::new(ctx);
+        let _ = set_level_score_distribution(level_score_distribution, max_level, &mut distribution);
         let uid = object::new(ctx);
         let id = object::uid_to_inner(&uid);
         let cap = ProviderCap {
@@ -189,8 +172,8 @@ module suipass::provider {
             level_score_distribution: distribution,
             max_score,
             disable: false,
-            requests: vec_map::empty(),
-            records: vec_map::empty(),
+            requests: table::new(ctx),
+            records: table::new(ctx),
         };
         (cap, provider)
     }
@@ -206,8 +189,7 @@ module suipass::provider {
         provider: &mut Provider,
         distribution: vector<u16>,
     ){
-        let distribution = get_level_score_distribution(distribution, provider.max_level);
-        provider.level_score_distribution = distribution;
+        let _ = set_level_score_distribution(distribution, provider.max_level, &mut provider.level_score_distribution);
     }
 
     public(package) fun update_info(
@@ -254,7 +236,7 @@ module suipass::provider {
             proof: string::utf8(proof)
         };
 
-        vec_map::insert(&mut provider.requests, key, req);
+        table::add(&mut provider.requests, key, req);
 
         key
     }
@@ -271,16 +253,16 @@ module suipass::provider {
         let request_id = &address::from_bytes(hash::blake2b256(&address::to_bytes(*requester)));
 
         assert!(provider_cap.provider == object::uid_to_inner(&provider.id), ENotProviderOwner);
-        assert!(vec_map::contains(&provider.requests, request_id), EInvalidRequest);
+        assert!(table::contains(&provider.requests, *request_id), EInvalidRequest);
         assert!(vector::length(&evidence) > 0, ERequestRejected);
-        let (_, request) = vec_map::remove(&mut provider.requests, request_id);
+        let request = table::remove(&mut provider.requests, *request_id);
         let issued_date = tx_context::epoch_timestamp_ms(ctx);
         let record = Record { requester: *requester, level, evidence: string::utf8(evidence), issued_date };
-        if (vec_map::contains(&provider.records, &request.requester)) {
-            let cur = vec_map::get_mut(&mut provider.records, &request.requester);
+        if (table::contains(&provider.records, request.requester)) {
+            let cur = table::borrow_mut(&mut provider.records, request.requester);
             *cur = record;
         } else {
-            vec_map::insert(&mut provider.records, request.requester, record);
+            table::add(&mut provider.records, request.requester, record);
         };
 
         let approval = approval::new(id(provider), level, evidence, issued_date, ctx);
@@ -297,9 +279,9 @@ module suipass::provider {
         let request_id = &address::from_bytes(hash::blake2b256(&address::to_bytes(*requester)));
 
         assert!(provider_cap.provider == object::uid_to_inner(&provider.id), ENotProviderOwner);
-        assert!(vec_map::contains(&provider.requests, request_id), EInvalidRequest);
+        assert!(table::contains(&provider.requests, *request_id), EInvalidRequest);
 
-        let (_, request) = vec_map::remove(&mut provider.requests, request_id);
+        let request = table::remove(&mut provider.requests, *request_id);
 
         request
     }

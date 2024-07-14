@@ -1,22 +1,9 @@
 module suipass::user {
-    use std::vector;
     use std::string::{Self, String};
 
-    use sui::object::{Self, UID, ID};
-    use sui::transfer;
-    use sui::tx_context::{Self, TxContext};
     use sui::vec_map::{Self, VecMap};
-
+    use sui::linked_table::{Self, LinkedTable};
     use suipass::approval::{Self, Approval};
-
-    // friend suipass::suipass;
-
-    #[test_only]
-    use sui::test_scenario;
-    #[test_only]
-    use sui::test_utils::assert_eq;
-
-    // Errors
 
     //======================================================================
     // Module Structs
@@ -25,7 +12,7 @@ module suipass::user {
     public struct User has key {
         id: UID,
         info: String,
-        approvals: VecMap<ID, Approval>,
+        approvals: LinkedTable<ID, Approval>,
     }
 
     //======================================================================
@@ -44,7 +31,7 @@ module suipass::user {
         let user = User {
             id: object::new(ctx),
             info: string::utf8(info),
-            approvals: vec_map::empty()
+            approvals: linked_table::new(ctx),
         };
         transfer::transfer(user, tx_context::sender(ctx))
     }
@@ -57,7 +44,7 @@ module suipass::user {
     }
 
     public fun merge(user: &mut User, approval: Approval) {
-        vec_map::insert(&mut user.approvals, approval::provider_id(&approval), approval)
+        linked_table::push_back(&mut user.approvals, approval::provider_id(&approval), approval)
     }
 
     //======================================================================
@@ -65,20 +52,16 @@ module suipass::user {
     //======================================================================
 
     public fun levels(user: &User): VecMap<ID, u16> {
-        let ids = vec_map::keys(&user.approvals);
-        let mut len = vector::length(&ids);
-        std::debug::print(&ids);
-
+        let mut current_key_opt = user.approvals.front();
         let mut result: VecMap<ID, u16> = vec_map::empty();
-        loop {
-            if (len == 0) break;
-            len = len - 1;
-
-            let id = vector::borrow(&ids, len);
-            let approval = vec_map::get(&user.approvals, id);
-
-            vec_map::insert(&mut result, *id, approval::level(approval));
+        while (!current_key_opt.is_none()){
+            let current = *option::borrow<ID>(current_key_opt);
+            let approval = linked_table::borrow(&user.approvals, current);
+            let _ = approval::level(approval);
+            current_key_opt = linked_table::next(&user.approvals, current);
+            vec_map::insert(&mut result, current, approval::level(approval));
         };
+
         result
     }
 

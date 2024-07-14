@@ -1,7 +1,7 @@
 #[test_only]
 module suipass::enterprise_test{
     use sui::test_scenario::{Self as test, next_tx, ctx, end, begin, Scenario};
-    use suipass::suipass::{Self, SuiPass, AdminCap, submit_request, resolve_request, get_score};
+    use suipass::suipass::{Self, SuiPass};
     use suipass::provider::{ProviderCap};
     use suipass::enterprise::{Enterprise, create_enterprise, calculate_user_score};
     use suipass::user::{User, new, merge};

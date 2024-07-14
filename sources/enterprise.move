@@ -1,19 +1,12 @@
 module suipass::enterprise {
-    use std::vector;
-    use std::option::{Option};
     use std::string::{Self, String};
 
-    use sui::coin;
     use sui::event;
-    use sui::transfer;
-    use sui::sui::SUI;
-    use sui::object::{Self, UID, ID};
-    use sui::vec_map::{Self, VecMap};
-    use sui::tx_context::{Self, TxContext};
+    use sui::vec_map::Self;
+    use sui::table::{Self, Table};
 
-    use suipass::provider::{Self, Provider, ProviderCap};
     use suipass::user::{Self, User};
-    use suipass::suipass::{Self, AdminCap, SuiPass};
+    use suipass::suipass::{Self, SuiPass};
 
     // This module sumarizes all supported credits,
     // allows users to mint their passport NFT (Need to check if NFT can be updated, OR users will hold a lot of passports since their credit can be expire)
@@ -42,8 +35,8 @@ module suipass::enterprise {
         id: UID,
         name: String,
         metadata: String,
-        providers: VecMap<ID, ProviderConfig>,
-        weights: VecMap<ID, u16>,
+        providers: Table<ID, ProviderConfig>,
+        weights: Table<ID, u16>,
         threshold: u16,
     }
 
@@ -72,13 +65,14 @@ module suipass::enterprise {
         threshold: u16, // TODO: Handle check if it valid
         ctx: &mut TxContext
     ) {
-        let weights = convert_provider_weights(weights_vec, provider_ids);
-        let mut providers = vec_map::empty();
+        let mut weights_table = table::new(ctx);
+        let _ = convert_provider_weights(weights_vec, provider_ids, &mut weights_table);
+        let mut providers = table::new(ctx);
         let mut i = 0;
         while (i < vector::length(&provider_ids)) {
             let id = *vector::borrow(&provider_ids, i);
             suipass::assert_provider_exist(suipass, id);
-            vec_map::insert(&mut providers, id, ProviderConfig {});
+            table::add(&mut providers, id, ProviderConfig {});
             i = i + 1;
         };
         let uid = object::new(ctx);
@@ -98,7 +92,7 @@ module suipass::enterprise {
             name: string::utf8(name),
             metadata: string::utf8(metadata),
             providers,
-            weights,
+            weights: weights_table,
             threshold,
         });
         transfer::transfer(cap, tx_context::sender(ctx));
@@ -125,7 +119,7 @@ module suipass::enterprise {
 
             let increase = (suipass::get_score(suipass, id, level) as u64);
 
-            let weight = (*vec_map::get(&ent.weights, id) as u64);
+            let weight = (*table::borrow(&ent.weights, *id) as u64);
             result = result + increase * weight / (MAX_WEIGHT as u64);
         };
 
@@ -137,21 +131,20 @@ module suipass::enterprise {
         score >= ent.threshold
     }
 
-    fun convert_provider_weights(weight_vec: vector<u16>, provider_ids: vector<ID>): VecMap<ID, u16>{
+    fun convert_provider_weights(weight_vec: vector<u16>, provider_ids: vector<ID>, weight_result: &mut Table<ID, u16>): &mut Table<ID, u16>{
         assert!(vector::length(&provider_ids) == vector::length(&weight_vec), EInvalidProviderWeights);
         let mut len = vector::length(&weight_vec);
         let mut sum = 0;
-        let mut weights: VecMap<ID, u16> = vec_map::empty();
         while (len > 0) {
             len = len - 1;
             let weight = *vector::borrow(&weight_vec, len);
             sum = sum + weight;
             let provider = *vector::borrow(&provider_ids, len);
-            vec_map::insert(&mut weights, provider, weight);
+            table::add(weight_result, provider, weight);
         };
         assert!(sum == MAX_WEIGHT, EInvalidProviderWeights);
 
-        weights
+        weight_result
     }
 
     //======================================================================

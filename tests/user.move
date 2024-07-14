@@ -1,11 +1,9 @@
 
 #[test_only]
 module suipass::user_test {
-    use sui::test_scenario::{Self as test, Scenario, next_tx, ctx, end, TransactionEffects};
     use sui::test_scenario;
-    use suipass::suipass::{Self, init_for_testing};
     use suipass::user::{User, new, get_user_info};
-    use std::string::{Self, String};
+    use std::string;
     use sui::test_utils::assert_eq;
 
     #[test]

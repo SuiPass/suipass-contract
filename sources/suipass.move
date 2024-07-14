@@ -1,15 +1,11 @@
 module suipass::suipass {
-    use std::vector;
-    use std::option::{Option};
-    use std::string::{Self, String};
+    use std::string::String;
 
-    use sui::object::{Self, UID, ID};
-    use sui::transfer;
-    use sui::tx_context::{Self, TxContext};
     use sui::sui::SUI;
     use sui::coin;
     use sui::event;
-    use sui::vec_map::{Self, VecMap};
+    use sui::vec_map;
+    use sui::linked_table::{Self, LinkedTable};
 
     use suipass::provider::{Self, Provider, ProviderCap};
     use suipass::user::{Self, User};
@@ -33,7 +29,7 @@ module suipass::suipass {
     // This struct store supported providers and others config
     public struct SuiPass has key, store {
         id: UID,
-        providers: VecMap<ID, Provider>,
+        providers: LinkedTable<ID, Provider>,
         threshold: u16,
         expiration_period: u64
     }
@@ -95,7 +91,7 @@ module suipass::suipass {
 
         transfer::share_object(SuiPass {
             id: object::new(ctx),
-            providers: vec_map::empty(),
+            providers: linked_table::new(ctx),
             threshold: DEFAULT_THRESHOLD,
             expiration_period: DEFAULT_EXPIRATION_PERIOD
         });
@@ -123,8 +119,8 @@ module suipass::suipass {
            provider_cap_id: provider::cap_id(&provider_cap)
         };
 
-        assert!(!vec_map::contains(&suipass.providers, &provider_id), EProviderAlreadyExist);
-        vec_map::insert(&mut suipass.providers, provider_id, provider);
+        assert!(!linked_table::contains(&suipass.providers, provider_id), EProviderAlreadyExist);
+        linked_table::push_back(&mut suipass.providers, provider_id, provider);
         transfer::public_transfer(provider_cap, owner);
         event::emit(event);
     }
@@ -138,7 +134,7 @@ module suipass::suipass {
         total_levels: &mut Option<u16>,
     ) {
         assert_provider_exist(suipass, provider::id_from_cap(provider_cap));
-        let provider = vec_map::get_mut(&mut suipass.providers, &provider::id_from_cap(provider_cap)); 
+        let provider = linked_table::borrow_mut(&mut suipass.providers, provider::id_from_cap(provider_cap)); 
         provider::update_info(provider, metadata, submit_fee, update_fee, total_levels);
     }
 
@@ -159,7 +155,7 @@ module suipass::suipass {
     ){
         assert_provider_exist(suipass, provider_id);
 
-        let provider = vec_map::get_mut(&mut suipass.providers, &provider_id);
+        let provider = linked_table::borrow_mut(&mut suipass.providers, provider_id);
         provider::update_score_distribution(provider, score_distribution);
     }
 
@@ -172,7 +168,7 @@ module suipass::suipass {
     ) {
         assert_provider_exist(suipass, provider_id);
 
-        let provider = vec_map::get_mut(&mut suipass.providers, &provider_id);
+        let provider = linked_table::borrow_mut(&mut suipass.providers, provider_id);
         provider::update_max_score(provider, score);
     }
 
@@ -184,7 +180,7 @@ module suipass::suipass {
         ctx: &mut TxContext
     ) {
         assert_provider_exist(suipass, provider_id);
-        let provider = vec_map::get_mut(&mut suipass.providers, &provider_id);
+        let provider = linked_table::borrow_mut(&mut suipass.providers, provider_id);
         let requester = tx_context::sender(ctx);
         let request_id = provider::submit_request(provider, requester, proof, coin, ctx);
         event::emit(RequestSubmitted {
@@ -202,7 +198,7 @@ module suipass::suipass {
         level: u16,
         ctx: &mut TxContext
     ) {
-        let provider = vec_map::get_mut(&mut suipass.providers, &provider::id_from_cap(provider_cap));
+        let provider = linked_table::borrow_mut(&mut suipass.providers, provider::id_from_cap(provider_cap));
         let request = provider::resolve_request(provider_cap, provider, &request_id, evidence, level, ctx);
         event::emit(RequestResolved {
             provider_id: provider::id(provider),
@@ -216,7 +212,7 @@ module suipass::suipass {
         suipass: &mut SuiPass,
         request_id: address,
     ) {
-        let provider = vec_map::get_mut(&mut suipass.providers, &provider::id_from_cap(provider_cap));
+        let provider = linked_table::borrow_mut(&mut suipass.providers, provider::id_from_cap(provider_cap));
         let request = provider::reject_request(provider_cap, provider, &request_id);
         event::emit(RequestResolved {
             provider_id: provider::id(provider),
@@ -232,12 +228,12 @@ module suipass::suipass {
     public fun get_provider_score(suipass: &SuiPass, provider: &Provider, _: &mut TxContext): u16 {
         let id = provider::id(provider);
         assert_provider_exist(suipass, id);
-        provider::max_score(vec_map::get(&suipass.providers, &id))
+        provider::max_score(linked_table::borrow(&suipass.providers, id))
     }
 
     public fun get_score(suipass: &SuiPass, provider_id: &ID, level: u16): u16 {
         assert_provider_exist(suipass, *provider_id);
-        let provider = vec_map::get(&suipass.providers, provider_id);
+        let provider = linked_table::borrow(&suipass.providers, *provider_id);
         let max_score = provider::max_score(provider);
         let score_distribution = provider::level_score_distribution(provider);
         let mut score = 0;
@@ -297,7 +293,7 @@ module suipass::suipass {
     //======================================================================
 
     public fun assert_provider_exist(suipass: &SuiPass, provider_id: ID) {
-        assert!(vec_map::contains(&suipass.providers, &provider_id), EProviderNotExist);
+        assert!(linked_table::contains(&suipass.providers, provider_id), EProviderNotExist);
     }
 
     //======================================================================
@@ -309,7 +305,7 @@ module suipass::suipass {
     }
 
     #[test_only]
-    public fun get_provider_by_id(suipass: &SuiPass, provider_id: &ID): &Provider {
-        vec_map::get(&suipass.providers, provider_id)
+    public fun get_provider_by_id(suipass: &SuiPass, provider_id: ID): &Provider {
+        linked_table::borrow(&suipass.providers, provider_id)
     }
 }
